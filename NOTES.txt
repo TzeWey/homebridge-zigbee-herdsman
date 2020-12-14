@@ -1,0 +1,45 @@
+[11/15/2020, 10:56:12 AM] [ZigbeeHerdsman] Zigbee network parameters: {"channel":11,"extendedPanID":"0x6ad5c19d42b5ecb4","panID":13662}
+[11/15/2020, 10:56:12 AM] [ZigbeeHerdsman] Registered zigbee-herdsman event handlers
+[11/15/2020, 10:56:12 AM] [ZigbeeHerdsman] Restoring existing accessory from cache: Bedroom
+[11/15/2020, 10:56:12 AM] [ZigbeeHerdsman] Restoring existing accessory from cache: Kitchen
+[11/15/2020, 10:56:12 AM] [ZigbeeHerdsman] Restoring existing accessory from cache: Switch
+[11/15/2020, 10:56:12 AM] [ZigbeeHerdsman] device: 0x00124b0021b4a268 undefined undefined
+[11/15/2020, 10:56:12 AM] [ZigbeeHerdsman] device: 0x5c0272fffe8dca81 _TZ3000_bi6lpsew TS0043
+[11/15/2020, 10:56:12 AM] [ZigbeeHerdsman] device: 0x842e14fffe1601c4 _TZ3000_oiymh3qu TS011F
+[11/15/2020, 10:56:12 AM] [ZigbeeHerdsman] device: 0x842e14fffe1601be _TZ3000_oiymh3qu TS011F
+[11/15/2020, 10:56:12 AM] [ZigbeeHerdsman] device: 0x588e81fffe6ad399 IKEA of Sweden TRADFRI control outlet
+[11/15/2020, 10:56:12 AM] [ZigbeeHerdsman] device: 0xbc33acfffe0d91bd IKEA of Sweden TRADFRI motion sensor
+[11/15/2020, 10:56:12 AM] [ZigbeeHerdsman] device: 0x842e14fffe67aef3 IKEA of Sweden TRADFRI on/off switch
+[11/15/2020, 10:56:12 AM] [ZigbeeHerdsman] Zigbee: allowing new devices to join.
+[11/15/2020, 10:56:12 AM] [ZigbeeHerdsman] Started platform: ZigbeeHerdsman
+[11/15/2020, 10:56:14 AM] [ZigbeeHerdsman] Get Characteristic On -> false
+[11/15/2020, 10:56:14 AM] [ZigbeeHerdsman] Get Characteristic On -> false
+[11/15/2020, 10:56:22 AM] [ZigbeeHerdsman] Received Zigbee message from '0xbc33acfffe0d91bd', type 'commandOnWithTimedOff', cluster 'genOnOff', data '{"ctrlbits":0,"offwaittime":0,"ontime":1800}' from endpoint 1
+[11/15/2020, 10:56:35 AM] [ZigbeeHerdsman] Accepting joining whitelisted device '0x842e14fffea7f77f'
+[11/15/2020, 10:56:35 AM] [ZigbeeHerdsman] Device '0x842e14fffea7f77f' joined
+[11/15/2020, 10:56:35 AM] [ZigbeeHerdsman] Starting interview of '0x842e14fffea7f77f'
+[11/15/2020, 10:56:35 AM] [ZigbeeHerdsman] Accepting joining whitelisted device '0x842e14fffea7f77f'
+[11/15/2020, 10:56:37 AM] [ZigbeeHerdsman] Accepting joining whitelisted device '0x842e14fffea7f77f'
+[11/15/2020, 10:56:37 AM] [ZigbeeHerdsman] Accepting joining whitelisted device '0x842e14fffea7f77f'
+[11/15/2020, 10:56:43 AM] [ZigbeeHerdsman] Accepting joining whitelisted device '0x842e14fffea7f77f'
+[11/15/2020, 10:56:43 AM] [ZigbeeHerdsman] Accepting joining whitelisted device '0x842e14fffea7f77f'
+[11/15/2020, 10:56:43 AM] [ZigbeeHerdsman] Device '0x842e14fffea7f77f' announced itself
+[11/15/2020, 10:56:48 AM] [ZigbeeHerdsman] Received Zigbee message from '0x842e14fffea7f77f', type 'readResponse', cluster 'genBasic', data '{"modelId":"TRADFRI bulb E27 CWS opal 600lm"}' from endpoint 1
+[11/15/2020, 10:56:48 AM] [ZigbeeHerdsman] Received Zigbee message from '0x842e14fffea7f77f', type 'readResponse', cluster 'genBasic', data '{"manufacturerName":"IKEA of Sweden"}' from endpoint 1
+[11/15/2020, 10:56:49 AM] [ZigbeeHerdsman] Received Zigbee message from '0x842e14fffea7f77f', type 'readResponse', cluster 'genBasic', data '{"powerSource":1}' from endpoint 1
+[11/15/2020, 10:56:49 AM] [ZigbeeHerdsman] Received Zigbee message from '0x842e14fffea7f77f', type 'readResponse', cluster 'genBasic', data '{"zclVersion":1}' from endpoint 1
+[11/15/2020, 10:56:49 AM] [ZigbeeHerdsman] Received Zigbee message from '0x842e14fffea7f77f', type 'readResponse', cluster 'genBasic', data '{"appVersion":17}' from endpoint 1
+[11/15/2020, 10:56:49 AM] [ZigbeeHerdsman] Received Zigbee message from '0x842e14fffea7f77f', type 'readResponse', cluster 'genBasic', data '{"stackVersion":87}' from endpoint 1
+[11/15/2020, 10:56:49 AM] [ZigbeeHerdsman] Get Characteristic On -> false
+[11/15/2020, 10:56:49 AM] [ZigbeeHerdsman] Set Characteristic Brightness ->  100
+[11/15/2020, 10:56:49 AM] [ZigbeeHerdsman] Set Characteristic On -> true
+[11/15/2020, 10:56:49 AM] [ZigbeeHerdsman] Received Zigbee message from '0x842e14fffea7f77f', type 'readResponse', cluster 'genBasic', data '{"hwVersion":1}' from endpoint 1
+[11/15/2020, 10:56:49 AM] [ZigbeeHerdsman] Received Zigbee message from '0x842e14fffea7f77f', type 'readResponse', cluster 'genBasic', data '{"dateCode":"20170315"}' from endpoint 1
+[11/15/2020, 10:56:49 AM] [ZigbeeHerdsman] Get Characteristic On -> true
+[11/15/2020, 10:56:49 AM] [ZigbeeHerdsman] Set Characteristic On -> false
+[11/15/2020, 10:56:49 AM] [ZigbeeHerdsman] Received Zigbee message from '0x842e14fffea7f77f', type 'readResponse', cluster 'genBasic', data '{"swBuildId":"1.3.002"}' from endpoint 1
+[11/15/2020, 10:56:49 AM] [ZigbeeHerdsman] Successfully interviewed '0x842e14fffea7f77f', device has successfully been paired
+[11/15/2020, 10:56:49 AM] [ZigbeeHerdsman] Device '0x842e14fffea7f77f' is supported, identified as: IKEA TRADFRI LED bulb E14/E26/E27 600 lumen, dimmable, color, opal white (LED1624G9)
+[11/15/2020, 10:56:49 AM] [ZigbeeHerdsman] Get Characteristic On -> false
+[11/15/2020, 10:56:49 AM] [ZigbeeHerdsman] Set Characteristic Brightness ->  100
+[11/15/2020, 10:56:49 AM] [ZigbeeHerdsman] Set Characteristic On -> true

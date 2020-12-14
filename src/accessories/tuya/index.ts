@@ -1,0 +1,1 @@
+export { TuyaOnOffTripleSwitch } from './tuyaOnOffTripleSwitch';

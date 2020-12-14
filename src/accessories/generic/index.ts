@@ -1,0 +1,1 @@
+export { GenericOutlet } from './genericOutlet';

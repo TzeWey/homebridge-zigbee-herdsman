@@ -1,0 +1,68 @@
+{
+  "pluginAlias": "ZigbeeHerdsman",
+  "pluginType": "platform",
+  "singular": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "default": "ZigbeeHerdsman",
+        "minLength": 1,
+        "required": true
+      },
+      "port": {
+        "title": "Port",
+        "description": "location of the adapter (example: /dev/tty0). To auto-detect the port, leave empty.",
+        "type": "string",
+        "required": true
+      },
+      "panID": {
+        "title": "PAN ID",
+        "description": "Identify the ZigBee PAN-ID. This id should be a value between 0 and 16383 (0x3FFF).",
+        "type": "number",
+        "oneOf": [
+          {
+            "type": "number",
+            "default": 0,
+            "minimum": 0,
+            "maximum": 16383
+          }
+        ],
+        "default": 13662,
+        "required": true
+      },
+      "channel": {
+        "title": "Channel",
+        "description": "Channel for your ZigBee dongle (11-25).",
+        "type": "number",
+        "enum": [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25],
+        "default": 11,
+        "required": true
+      },
+      "disableLED": {
+        "title": "Disable LED",
+        "description": "Enable/Disable the LED",
+        "type": "boolean",
+        "default": false,
+        "required": false
+      },
+      "permitJoin": {
+        "title": "Permit Join",
+        "description": "Allow/Disallow new devices from joining the network",
+        "type": "boolean",
+        "default": false,
+        "required": false
+      }
+    }
+  },
+  "form": [
+    "name",
+    "port",
+    "panID",
+    "channel",
+    "disableLED",
+    "permitJoin"
+  ]
+}
