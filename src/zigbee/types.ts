@@ -70,24 +70,7 @@ export interface FromConverter {
   convert: (model, message: MessagePayload, publish: (...args) => void, options: any, meta: Meta) => Partial<any>;
 }
 
-export interface MetaBattery {
-  voltageToPercentage?: string;
-  dontDividePercentage?: boolean;
-}
-
-export interface Meta {
-  turnsOffAtBrightness1?: boolean;
-  supportsHueAndSaturation?: boolean;
-  configureKey?: number;
-  disableDefaultResponse?: boolean;
-  applyRedFix?: boolean;
-  enhancedHue?: boolean;
-  multiEndpoint?: boolean;
-  timeout?: number;
-  battery?: MetaBattery;
-}
-
-export interface ZigbeeDefinition {
+interface ZigbeeDefinition {
   zigbeeModel: string[];
   model: string;
   vendor: string;
@@ -95,7 +78,9 @@ export interface ZigbeeDefinition {
   supports?: string;
   fromZigbee: FromConverter[];
   toZigbee: ToConverter[];
-  meta?: Partial<Meta>;
+  meta?: {
+    configureKey?: number;
+  };
   configure?: (device: Device, coordinatorEndpoint: Endpoint) => Promise<void>;
   [key: string]: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
