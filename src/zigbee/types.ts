@@ -70,7 +70,7 @@ export interface FromConverter {
   convert: (model, message: MessagePayload, publish: (...args) => void, options: any, meta: Meta) => Partial<any>;
 }
 
-interface ZigbeeDefinition {
+export interface ZigbeeDefinition {
   zigbeeModel: string[];
   model: string;
   vendor: string;
