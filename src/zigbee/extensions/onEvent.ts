@@ -1,6 +1,6 @@
 import { ZigbeeHerdsmanPlatform } from '../../platform';
 import { MessagePayload } from 'zigbee-herdsman/dist/controller/events';
-import { zigbeeHerdsmanConverters } from 'zigbee-herdsman-converters';
+import { onEvent as LegacyOnEvent } from 'zigbee-herdsman-converters';
 
 import { Zigbee } from '../zigbee';
 import { ZigbeeEntity, Events } from '../types';
@@ -65,7 +65,7 @@ export class ZigbeeOnEvent {
   }
 
   private callOnEvent(resolvedEntity: ZigbeeEntity, type: Events | 'stop' | 'start', data: Partial<MessagePayload>) {
-    zigbeeHerdsmanConverters.onEvent(type, data, resolvedEntity.device, resolvedEntity.settings);
+    LegacyOnEvent(type, data, resolvedEntity.device, resolvedEntity.settings);
 
     if (resolvedEntity.definition && resolvedEntity.definition.onEvent) {
       resolvedEntity.definition.onEvent(type, data, resolvedEntity.device, resolvedEntity.settings);
