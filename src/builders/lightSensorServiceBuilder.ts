@@ -21,7 +21,7 @@ export class LightSensorServiceBuilder extends ServiceBuilder {
 
     this.zigbeeAccessory.on(Events.stateUpdate, (state: { illuminance_lux?: number }) => {
       if (typeof state.illuminance_lux !== 'undefined') {
-        const illuminance_lux = state.illuminance_lux;
+        const illuminance_lux = Math.max(state.illuminance_lux, 0.001);
         this.debugState('CurrentAmbientLightLevel', illuminance_lux);
         this.service.updateCharacteristic(Characteristic.CurrentAmbientLightLevel, illuminance_lux);
       }
