@@ -14,7 +14,7 @@ import {
 import { ZigbeeHerdsmanPlatform } from '../platform';
 
 import { ZigbeeConfig, ZigbeeEntity, ZigbeeDefinition, Device, DeviceType, Group, Events } from './types';
-import { ZigbeeConfigure, ZigbeeOnEvent, ZigbeePing } from './extensions';
+import { ZigbeeConfigure, ZigbeeOnEvent, ZigbeePing, ZigbeeOtaUpdate } from './extensions';
 
 export class Zigbee extends EventEmitter {
   private readonly herdsman: Controller;
@@ -23,6 +23,7 @@ export class Zigbee extends EventEmitter {
   private readonly zigbeeConfigure: ZigbeeConfigure;
   private readonly zigbeeOnEvent: ZigbeeOnEvent;
   private readonly zigbeePing: ZigbeePing;
+  private readonly zigbeeOtaUpdate: ZigbeeOtaUpdate;
 
   constructor(private readonly platform: ZigbeeHerdsmanPlatform, private readonly config: ZigbeeConfig) {
     super();
@@ -53,6 +54,7 @@ export class Zigbee extends EventEmitter {
     this.zigbeeConfigure = new ZigbeeConfigure(platform, this);
     this.zigbeeOnEvent = new ZigbeeOnEvent(platform, this);
     this.zigbeePing = new ZigbeePing(platform, this);
+    this.zigbeeOtaUpdate = new ZigbeeOtaUpdate(platform, this);
   }
 
   async start() {
