@@ -9,9 +9,9 @@ export class XiaomiMotionLightSensor extends ZigbeeAccessory {
 
   protected resolveServices(): Service[] {
     this.battery = new BatteryServiceBuilder(this).build();
-    this.motion = new MotionSensorServiceBuilder(this).build();
     this.light = new LightSensorServiceBuilder(this).build();
-    return [this.battery, this.motion, this.light];
+    this.motion = new MotionSensorServiceBuilder(this).build();
+    return [this.battery, this.light, this.motion];
   }
 
   protected async onStateUpdate() {
