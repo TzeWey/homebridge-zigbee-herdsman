@@ -1,4 +1,4 @@
-import { CharacteristicEventTypes, CharacteristicGetCallback } from 'homebridge';
+import { CharacteristicEventTypes, CharacteristicGetCallback, HAPStatus } from 'homebridge';
 
 import { ZigbeeAccessory, Events } from '../accessories';
 import { ServiceBuilder } from './serviceBuilder';
@@ -16,7 +16,8 @@ export class LightSensorServiceBuilder extends ServiceBuilder {
     this.service
       .getCharacteristic(Characteristic.CurrentAmbientLightLevel)
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
-        callback(null, this.zigbeeAccessory.state.illuminance_lux);
+        const illuminance_lux = this.zigbeeAccessory.state?.illuminance_lux || 0.001;
+        callback(HAPStatus.SUCCESS, Math.max(illuminance_lux, 0.001));
       });
 
     this.zigbeeAccessory.on(Events.stateUpdate, (state: { illuminance_lux?: number }) => {
