@@ -102,16 +102,19 @@ export class ZigbeeConfigure {
       return false;
     }
 
+    const entityName = resolvedEntity.definition.description;
+    const entityDescription = resolvedEntity.definition.description;
+
     try {
       await resolvedEntity.definition.configure(device, this.coordinatorEndpoint);
-      this.log.info(`Successfully configured '${resolvedEntity.name}'`);
+      this.log.info(`Successfully configured '${entityName}' [${entityDescription}]`);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (<any>device).meta.configured = resolvedEntity.definition.meta?.configureKey;
       device.save();
     } catch (error) {
       this.attempts[ieeeAddr]++;
       const attempt = this.attempts[ieeeAddr];
-      const msg = `Failed to configure '${resolvedEntity.name}', attempt ${attempt} (${error.stack})`;
+      const msg = `Failed to configure '${entityName}' [${entityDescription}] , attempt ${attempt} (${error.stack})`;
       this.log.error(msg);
 
       if (throwError) {

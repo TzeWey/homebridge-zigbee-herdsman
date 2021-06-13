@@ -44,6 +44,7 @@ export class Zigbee extends EventEmitter {
       },
       adapter: {
         concurrent: 16,
+        disableLED: config.disableLED,
       },
       acceptJoiningDeviceHandler: (ieeeAddr) => this.acceptJoiningDeviceHandler(ieeeAddr),
     });
@@ -74,11 +75,6 @@ export class Zigbee extends EventEmitter {
     this.herdsman.on(HerdsmanEvents.deviceLeave, this.onZigbeeDeviceLeave.bind(this));
     this.herdsman.on(HerdsmanEvents.message, this.onZigbeeMessage.bind(this));
     this.log.debug('Registered zigbee-herdsman event handlers');
-
-    // Check if we have to turn off the led
-    if (this.config.disableLED) {
-      await this.herdsman.setLED(false);
-    }
 
     // Check if we have to set a transmit power
     if (this.config.transmitPower) {

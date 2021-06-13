@@ -26,7 +26,7 @@ export class ZigbeeAccessoryResolver {
      * IKEA
      */
     vendor = 'IKEA';
-    this.registerResolver(vendor, ['E1603/E1702'], GenericOutlet);
+    this.registerResolver(vendor, ['E1603/E1702/E1708'], GenericOutlet);
     this.registerResolver(vendor, ['E1525/E1745'], IkeaMotionSensor);
     this.registerResolver(vendor, ['E1743'], IkeaOnOffSwitch);
     this.registerResolver(vendor, ['LED1624G9'], IkeaTradfriDimColor);

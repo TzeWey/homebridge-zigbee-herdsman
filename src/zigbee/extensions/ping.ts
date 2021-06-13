@@ -10,6 +10,7 @@ export class ZigbeePing {
   // e.g. E11-G13 https://github.com/Koenkk/zigbee2mqtt/issues/775#issuecomment-453683846
   PINGABLE_END_DEVICES = [
     zigbeeHerdsmanConverters.devices.find((d) => d.model === 'E11-G13'),
+    zigbeeHerdsmanConverters.devices.find((d) => d.model === 'E11-N1EA'),
     zigbeeHerdsmanConverters.devices.find((d) => d.model === '53170161'),
   ];
 
