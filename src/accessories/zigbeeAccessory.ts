@@ -23,6 +23,9 @@ export abstract class ZigbeeAccessory extends EventEmitter {
   private readonly messageQueue: MessageQueue<string, MessagePayload>;
   private readonly messagePublish: (...args: any[]) => void; // eslint-disable-line @typescript-eslint/no-explicit-any
 
+  protected abstract registerEvents(): void;
+  protected abstract resolveServices(): Service[];
+
   constructor(
     public readonly platform: ZigbeeHerdsmanPlatform,
     public readonly accessory: PlatformAccessory,
@@ -53,7 +56,8 @@ export abstract class ZigbeeAccessory extends EventEmitter {
       .setCharacteristic(Characteristic.SerialNumber, device.ieeeAddr)
       .setCharacteristic(Characteristic.Name, this.name);
 
-    // Resolve accessory services
+    // Initialize accessory class
+    this.registerEvents();
     this.resolveServices();
 
     this.accessory.on('identify', this.onIdentify.bind(this));
@@ -78,15 +82,18 @@ export abstract class ZigbeeAccessory extends EventEmitter {
     return this.zigbeeEntity?.definition?.vendor || this.device.manufacturerName;
   }
 
-  protected abstract resolveServices(): Service[];
-  protected abstract onStateUpdate(state: any): Promise<void>; // eslint-disable-line @typescript-eslint/no-explicit-any
-  protected abstract onIdentify(): Promise<void>;
+  private onIdentify() {
+    this.emit(Events.identify);
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private async updateState(state: any) {
+  private updateState(state: any, emitEvents = true) {
+    this.log.debug(`Updating state of device ${this.name} with `, state);
     Object.assign(this.state, state);
-    this.emit(Events.stateUpdate, state);
-    await this.onStateUpdate(state);
+    this.log.debug(`Updated state for device ${this.name} is now `, this.state);
+    if (emitEvents) {
+      this.emit(Events.stateUpdate, state);
+    }
   }
 
   public async processMessage(message: MessagePayload) {
@@ -282,7 +289,7 @@ export abstract class ZigbeeAccessory extends EventEmitter {
 
         // Update accessory state context only
         // Do not emit the state update event to avoid double processing as this was an explicit 'get' request by the caller
-        Object.assign(this.state, payload);
+        this.updateState(payload);
       });
     }
 

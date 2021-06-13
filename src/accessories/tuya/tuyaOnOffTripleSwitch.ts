@@ -1,5 +1,5 @@
 import { Service } from 'homebridge';
-import { ZigbeeAccessory } from '../zigbeeAccessory';
+import { ZigbeeAccessory, Events } from '..';
 import { ProgrammableSwitchServiceBuilder, BatteryServiceBuilder } from '../../builders';
 
 export class TuyaOnOffTripleSwitch extends ZigbeeAccessory {
@@ -7,6 +7,10 @@ export class TuyaOnOffTripleSwitch extends ZigbeeAccessory {
   private switchServiceButton2!: Service;
   private switchServiceButton3!: Service;
   private batteryService!: Service;
+
+  protected registerEvents() {
+    this.on(Events.stateUpdate, this.onStateUpdate.bind(this));
+  }
 
   protected resolveServices(): Service[] {
     const ProgrammableSwitchEvent = this.platform.Characteristic.ProgrammableSwitchEvent;
@@ -40,7 +44,7 @@ export class TuyaOnOffTripleSwitch extends ZigbeeAccessory {
     return [this.switchServiceButton1, this.switchServiceButton2, this.switchServiceButton3, this.batteryService];
   }
 
-  protected async onStateUpdate(state: {
+  private onStateUpdate(state: {
     action:
       | '1_single'
       | '1_double'
@@ -103,9 +107,5 @@ export class TuyaOnOffTripleSwitch extends ZigbeeAccessory {
           .setValue(ProgrammableSwitchEvent.LONG_PRESS);
         break;
     }
-  }
-
-  protected async onIdentify() {
-    // do nothing
   }
 }
