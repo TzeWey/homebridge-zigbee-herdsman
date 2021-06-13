@@ -181,9 +181,10 @@ export class Zigbee extends EventEmitter {
   }
 
   async permitJoin(permit: boolean, resolvedEntity?: ZigbeeEntity) {
+    const logEntityName = resolvedEntity ? ` via ${resolvedEntity.name}` : '';
     permit
-      ? this.log.info(`Zigbee: allowing new devices to join${resolvedEntity ? ` via ${resolvedEntity.name}` : ''}.`)
-      : this.log.info('Zigbee: disabling joining of new devices.');
+      ? this.log.info(`* New devices are allowed to join${logEntityName}`)
+      : this.log.info(`* New devices are NOT allowed to join${logEntityName}`);
 
     if (resolvedEntity && permit) {
       await this.herdsman.permitJoin(permit, resolvedEntity.device);

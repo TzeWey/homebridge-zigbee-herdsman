@@ -1,5 +1,6 @@
 import { ZigbeeHerdsmanPlatform } from '../../platform';
 import { DeviceJoinedPayload } from 'zigbee-herdsman/dist/controller/events';
+import { getConfigureKey } from 'zigbee-herdsman-converters';
 
 import { Zigbee } from '../zigbee';
 import { ZigbeeEntity, Endpoint, Events } from '../types';
@@ -22,7 +23,7 @@ export class ZigbeeConfigure {
 
     for (const device of this.zigbee.getClients()) {
       const resolvedEntity = this.zigbee.resolveEntity(device);
-      if (this.shouldConfigure(resolvedEntity)) {
+      if (this.shouldConfigure(resolvedEntity, Events.started)) {
         await this.configure(resolvedEntity);
       }
     }
@@ -37,18 +38,18 @@ export class ZigbeeConfigure {
       data.device.save();
     }
 
-    if (this.shouldConfigure(resolvedEntity)) {
+    if (this.shouldConfigure(resolvedEntity, Events.deviceJoined)) {
       this.configure(resolvedEntity);
     }
   }
 
   onMessage(_, resolvedEntity: ZigbeeEntity) {
-    if (this.shouldConfigure(resolvedEntity)) {
+    if (this.shouldConfigure(resolvedEntity, Events.message)) {
       this.configure(resolvedEntity);
     }
   }
 
-  shouldConfigure(resolvedEntity: ZigbeeEntity) {
+  shouldConfigure(resolvedEntity: ZigbeeEntity, event: Events) {
     if (!resolvedEntity || !resolvedEntity.definition || !resolvedEntity.definition.configure) {
       return false;
     }
@@ -61,12 +62,17 @@ export class ZigbeeConfigure {
     if (
       meta &&
       Object.prototype.hasOwnProperty.call(meta, 'configured') &&
-      meta.configured === resolvedEntity.definition?.meta?.configureKey
+      meta.configured === getConfigureKey(resolvedEntity.definition)
     ) {
       return false;
     }
 
-    if (resolvedEntity.device?.interviewing === true) {
+    if (resolvedEntity.device.interviewing === true) {
+      return false;
+    }
+
+    // Only configure end devices when a message is received, otherwise it will likely fails as they are sleeping.
+    if (resolvedEntity.device.type === 'EndDevice' && event !== Events.message) {
       return false;
     }
 
@@ -90,31 +96,31 @@ export class ZigbeeConfigure {
       this.attempts[ieeeAddr] = 0;
     }
 
-    this.log.info(`Configuring '${resolvedEntity.name}'`);
-
+    const entityName = resolvedEntity.name;
     if (!resolvedEntity.definition) {
-      this.log.error('Resolved entity has no definition!');
+      this.log.error(`Failed to configure '${entityName}', entity has no definition!`);
       return false;
     }
 
-    if (!resolvedEntity.definition.configure) {
-      this.log.error('Resolved entity definition has no configure!');
-      return false;
-    }
-
-    const entityName = resolvedEntity.definition.description;
     const entityDescription = resolvedEntity.definition.description;
+    if (!resolvedEntity.definition.configure) {
+      this.log.error(
+        `Failed to configure '${entityName}' [${entityDescription}], entity definition has no method 'configure'`,
+      );
+      return false;
+    }
 
     try {
+      this.log.info(`Configuring '${entityName}' [${entityDescription}]`);
       await resolvedEntity.definition.configure(device, this.coordinatorEndpoint);
-      this.log.info(`Successfully configured '${entityName}' [${entityDescription}]`);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (<any>device).meta.configured = resolvedEntity.definition.meta?.configureKey;
+      (<any>device).meta.configured = getConfigureKey(resolvedEntity.definition);
+      this.log.info(`Successfully configured '${entityName}' [${entityDescription}]`);
       device.save();
     } catch (error) {
       this.attempts[ieeeAddr]++;
       const attempt = this.attempts[ieeeAddr];
-      const msg = `Failed to configure '${entityName}' [${entityDescription}] , attempt ${attempt} (${error.stack})`;
+      const msg = `Failed to configure '${entityName}' [${entityDescription}], attempt ${attempt} (${error.stack})`;
       this.log.error(msg);
 
       if (throwError) {

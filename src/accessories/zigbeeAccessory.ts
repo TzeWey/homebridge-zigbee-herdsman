@@ -230,7 +230,7 @@ export abstract class ZigbeeAccessory extends EventEmitter {
       };
 
       if (type === 'set' && converter.convertSet) {
-        this.log.debug(`Publishing '${type}' '${key}' to '${resolvedEntity.name}'`);
+        this.log.debug(`Publishing '${type}' '${key}' with '${value}' to '${resolvedEntity.name}'`);
         const result = await converter.convertSet(actualTarget, key, value, meta).catch((error) => {
           const message = `Publish '${type}' '${key}' to '${resolvedEntity.name}' failed: '${error}'`;
           this.log.error(message);
