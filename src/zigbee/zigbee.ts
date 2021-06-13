@@ -108,9 +108,7 @@ export class Zigbee extends EventEmitter {
 
   private async onZigbeeDeviceJoined(data: DeviceJoinedPayload) {
     const name = data.device && data.device.ieeeAddr;
-    const resolvedEntity = this.resolveEntity(data.device);
     this.log.info(`Device '${name}' joined`);
-    this.emit(Events.deviceJoined, data, resolvedEntity);
   }
 
   private async onZigbeeDeviceInterview(data: DeviceInterviewPayload) {
@@ -123,6 +121,7 @@ export class Zigbee extends EventEmitter {
         if (resolvedEntity.definition) {
           const { vendor, description, model } = resolvedEntity.definition;
           this.log.info(`Device '${name}' is supported, identified as: ${vendor} ${description} (${model})`);
+          this.emit(Events.deviceJoined, data, resolvedEntity);
         } else {
           this.log.warn(
             `Device '${name}' with Zigbee model '${data.device.modelID}' is NOT supported, ` +
@@ -132,7 +131,7 @@ export class Zigbee extends EventEmitter {
         break;
 
       case 'failed':
-        this.log.error(`Failed to interview '${name}', device has not successfully been paired`);
+        this.log.error(`Failed to interview '${name}', device paring was NOT successful`);
         break;
 
       case 'started':

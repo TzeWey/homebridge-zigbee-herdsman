@@ -13,7 +13,15 @@ import * as path from 'path';
 import retry from 'async-retry';
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
-import { Zigbee, ZigbeeEntity, Events, MessagePayload } from './zigbee';
+import {
+  Zigbee,
+  ZigbeeEntity,
+  Events,
+  MessagePayload,
+  Device,
+  DeviceJoinedPayload,
+  DeviceLeavePayload,
+} from './zigbee';
 import { ZigbeeAccessory, ZigbeeAccessoryResolver } from './accessories';
 
 interface ZigbeeHerdsmanPlatformConfig extends PlatformConfig {
@@ -62,6 +70,9 @@ export class ZigbeeHerdsmanPlatform implements DynamicPlatformPlugin {
 
     this.zigbee.on(Events.adapterDisconnected, this.onZigbeeAdapterDisconnected.bind(this));
     this.zigbee.on(Events.message, this.onZigbeeMessage.bind(this));
+    this.zigbee.on(Events.started, this.onZigbeeStarted.bind(this));
+    this.zigbee.on(Events.deviceJoined, this.onZigbeeDeviceJoined.bind(this));
+    this.zigbee.on(Events.deviceLeave, this.onZigbeeDeviceLeave.bind(this));
 
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
     // Dynamic Platform plugins should only register new accessories after this event was fired,
@@ -70,15 +81,15 @@ export class ZigbeeHerdsmanPlatform implements DynamicPlatformPlugin {
     this.api.on(APIEvent.DID_FINISH_LAUNCHING, this.start.bind(this));
     this.api.on(APIEvent.SHUTDOWN, this.stop.bind(this));
 
-    this.log.debug('Finished initializing platform:', this.config.name);
+    this.log.debug('Finished initializing platform: ', this.config.name);
   }
 
-  /**
+  /*
    * This function is invoked when homebridge restores cached accessories from disk at startup.
    * It should be used to setup event handlers for characteristics and update respective values.
    */
   configureAccessory(accessory: PlatformAccessory) {
-    this.log.info('Loading accessory from cache:', accessory.displayName);
+    this.log.info('Loading accessory from cache: ', accessory.displayName);
     this.accessories.set(accessory.UUID, accessory);
   }
 
@@ -92,27 +103,107 @@ export class ZigbeeHerdsmanPlatform implements DynamicPlatformPlugin {
           retries: 10,
           minTimeout: 1000,
           maxTimeout: 8000,
-          onRetry: () => this.log.info('Retrying connect to ZigBee adapter'),
+          onRetry: () => this.log.info('Reattempt connect to ZigBee adapter'),
         },
       );
     } catch (error) {
-      this.log.error('Zigbee Start:', error);
+      this.log.error('Failed to connect to ZigBee adapter: ', error);
+      await this.zigbee.stop();
+      throw error;
     }
-    this.cleanupDevices();
-    this.configureDevices();
-    this.log.info('Started platform:', this.config.name);
+    this.log.info('Started platform: ', this.config.name);
 
     await this.zigbee.permitJoin(this.config.permitJoin || false);
   }
 
   private async stop() {
     await this.zigbee.stop();
-    this.log.info('Stopped platform:', this.config.name);
+    this.log.info('Stopped platform: ', this.config.name);
+  }
+
+  /*
+   * We use the Zigbee database as the source of truth,
+   * this routine will remove any cached devices that are not found in the adapter database
+   */
+  private cleanupDevices() {
+    const removed: string[] = [];
+    const zigbeeDevices = this.zigbee.getDevices();
+    const uuids = zigbeeDevices.map((e) => this.api.hap.uuid.generate(e.ieeeAddr));
+
+    this.log.info('Cleaning up any stale accessories...');
+    this.accessories.forEach((cachedAccessory) => {
+      if (!uuids.includes(cachedAccessory.UUID)) {
+        this.log.info('Removing existing accessory from cache: ', cachedAccessory.displayName);
+        this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [cachedAccessory]);
+        removed.push(cachedAccessory.UUID);
+      }
+    });
+
+    removed.forEach((uuid) => this.accessories.delete(uuid));
+  }
+
+  private async configureDevice(device: Device, resolvedEntity: ZigbeeEntity) {
+    // Do not associate Coordinators with accessories
+    if (device.type === 'Coordinator') {
+      return;
+    }
+
+    const uuid = this.api.hap.uuid.generate(device.ieeeAddr);
+    this.log.info(`Initializing device ${device.ieeeAddr} [${uuid}]`);
+
+    const ZigbeeAccessory = this.zigbeeAccessoryResolver.getAccessoryClass(device);
+    if (!ZigbeeAccessory) {
+      this.log.warn('Unrecognized device: ', device);
+      return;
+    }
+
+    const existingAccessory = this.accessories.get(uuid);
+    if (existingAccessory) {
+      // Update accessory cache with any changes to the accessory details and information
+      const zigbeeAccessory = new ZigbeeAccessory(this, existingAccessory, device);
+      this.zigbeeAccessories.set(uuid, zigbeeAccessory);
+      this.log.info('> Restoring existing accessory from cache: ', zigbeeAccessory.vendor, zigbeeAccessory.description);
+      this.api.updatePlatformAccessories([existingAccessory]);
+    } else {
+      // Create a new accessory and link the accessory to the platform
+      const zigbeeEntity = resolvedEntity || this.zigbee.resolveEntity(device);
+      const displayName = zigbeeEntity?.definition?.description || device.modelID || device.ieeeAddr;
+      const newAccessory = new this.api.platformAccessory(displayName, uuid);
+      const zigbeeAccessory = new ZigbeeAccessory(this, newAccessory, device);
+      this.zigbeeAccessories.set(uuid, zigbeeAccessory);
+      this.log.info('> Registering new accessory: ', zigbeeAccessory.vendor, zigbeeAccessory.description);
+      this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newAccessory]);
+      this.accessories.set(newAccessory.UUID, newAccessory);
+    }
+  }
+
+  private async onZigbeeStarted() {
+    this.cleanupDevices();
+
+    for (const device of this.zigbee.getClients()) {
+      const resolvedEntity = this.zigbee.resolveEntity(device);
+      this.configureDevice(device, resolvedEntity);
+    }
   }
 
   private async onZigbeeAdapterDisconnected() {
-    this.log.error('Adapter disconnected, stopping Zigbee');
+    this.log.warn('Adapter disconnected, stopping platform: ', this.config.name);
     await this.stop();
+  }
+
+  private async onZigbeeDeviceJoined(data: DeviceJoinedPayload, resolvedEntity: ZigbeeEntity) {
+    this.configureDevice(data.device, resolvedEntity);
+  }
+
+  private async onZigbeeDeviceLeave(data: DeviceLeavePayload) {
+    const ieeeAddr = data.ieeeAddr;
+    const uuid = this.api.hap.uuid.generate(ieeeAddr);
+    const existingAccessory = this.accessories.get(uuid);
+    if (existingAccessory) {
+      this.log.info('Removing accessory from cache: ', existingAccessory.displayName);
+      this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
+      this.accessories.delete(uuid);
+    }
   }
 
   private async onZigbeeMessage(data: MessagePayload, resolvedEntity: ZigbeeEntity) {
@@ -129,66 +220,5 @@ export class ZigbeeHerdsmanPlatform implements DynamicPlatformPlugin {
     }
 
     await zigbeeAccessory.processMessage(data);
-  }
-
-  /**
-   * We use the Zigbee database as the source of truth, this routine will remove
-   * cached devices which are not longer found in the adapter database
-   */
-  private cleanupDevices() {
-    const removed: string[] = [];
-    const zigbeeDevices = this.zigbee.getDevices();
-    const uuids = zigbeeDevices.map((e) => this.api.hap.uuid.generate(e.ieeeAddr));
-
-    this.accessories.forEach((cachedAccessory) => {
-      if (!uuids.includes(cachedAccessory.UUID)) {
-        this.log.info('Removing existing accessory from cache:', cachedAccessory.displayName);
-        this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [cachedAccessory]);
-        removed.push(cachedAccessory.UUID);
-      }
-    });
-
-    removed.forEach((uuid) => this.accessories.delete(uuid));
-  }
-
-  private async configureDevices() {
-    // Loop through each known Zigbee Device
-    this.zigbee.getDevices().forEach((device) => {
-      // Do not associate Coordinators with accessories
-      if (device.type === 'Coordinator') {
-        return;
-      }
-
-      const uuid = this.api.hap.uuid.generate(device.ieeeAddr);
-      this.log.info(`Initializing device ${device.ieeeAddr} [${uuid}]`);
-
-      const ZigbeeAccessory = this.zigbeeAccessoryResolver.getAccessoryClass(device);
-      if (!ZigbeeAccessory) {
-        this.log.warn('Unrecognized device:', device);
-        return;
-      }
-
-      const existingAccessory = this.accessories.get(uuid);
-      if (existingAccessory) {
-        // Update accessory cache with any changes to the accessory details and information
-        const zigbeeAccessory = new ZigbeeAccessory(this, existingAccessory, device);
-        this.zigbeeAccessories.set(uuid, zigbeeAccessory);
-        this.log.info(
-          '> Restoring existing accessory from cache:',
-          zigbeeAccessory.vendor,
-          zigbeeAccessory.description,
-        );
-        this.api.updatePlatformAccessories([existingAccessory]);
-      } else {
-        // Create a new accessory and link the accessory to the platform
-        const zigbeeEntity = this.zigbee.resolveEntity(device);
-        const displayName = zigbeeEntity?.definition?.description || device.modelID || device.ieeeAddr;
-        const newAccessory = new this.api.platformAccessory(displayName, uuid);
-        const zigbeeAccessory = new ZigbeeAccessory(this, newAccessory, device);
-        this.zigbeeAccessories.set(uuid, zigbeeAccessory);
-        this.log.info('> Adding new accessory:', zigbeeAccessory.vendor, zigbeeAccessory.description);
-        this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newAccessory]);
-      }
-    });
   }
 }
