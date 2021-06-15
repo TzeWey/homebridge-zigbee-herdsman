@@ -63,7 +63,7 @@ export class ZigbeeOtaUpdate {
     if (endpoint) {
       const response = { status: supportsOTA ? 0x95 : 0x98 };
       // Some devices send OTA requests without defining OTA cluster as input cluster.
-      this.log.info(`Responding to device '${resolvedEntity.name}' OTA request with `, response);
+      this.log.info(`Responding to device '${resolvedEntity.name}' OTA request with`, response);
       await endpoint.commandResponse('genOta', 'queryNextImageResponse', response);
     }
   }
