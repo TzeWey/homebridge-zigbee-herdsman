@@ -93,6 +93,22 @@ export class ZigbeeHerdsmanPlatform implements DynamicPlatformPlugin {
     this.accessories.set(accessory.UUID, accessory);
   }
 
+  public getZigbeeAccessory(resolvedEntity: ZigbeeEntity): ZigbeeAccessory | null {
+    const device = resolvedEntity.device;
+    if (!device) {
+      return null;
+    }
+
+    const uuid = this.api.hap.uuid.generate(device.ieeeAddr);
+    const zigbeeAccessory = this.zigbeeAccessories.get(uuid);
+    if (!zigbeeAccessory) {
+      this.log.debug(`could not find accessory ${uuid} [${device.ieeeAddr}]`);
+      return null;
+    }
+
+    return zigbeeAccessory;
+  }
+
   private async start() {
     try {
       await retry(
@@ -207,18 +223,7 @@ export class ZigbeeHerdsmanPlatform implements DynamicPlatformPlugin {
   }
 
   private async onZigbeeMessage(data: MessagePayload, resolvedEntity: ZigbeeEntity) {
-    const device = resolvedEntity.device;
-    if (!device) {
-      return;
-    }
-
-    const uuid = this.api.hap.uuid.generate(device.ieeeAddr);
-    const zigbeeAccessory = this.zigbeeAccessories.get(uuid);
-    if (!zigbeeAccessory) {
-      this.log.debug(`could not find accessory ${uuid} [${device.ieeeAddr}]`);
-      return;
-    }
-
-    await zigbeeAccessory.processMessage(data);
+    const zigbeeAccessory = this.getZigbeeAccessory(resolvedEntity);
+    await zigbeeAccessory?.processMessage(data);
   }
 }
