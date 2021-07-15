@@ -31,7 +31,7 @@
     "humanize-duration": "^3.27.0",
     "js-big-decimal": "^1.3.4",
     "json-stable-stringify-without-jsonify": "^1.0.1",
-    "zigbee-herdsman": "^0.13.118",
+    "zigbee-herdsman": "^0.13.119",
     "zigbee-herdsman-converters": "^14.0.194"
   },
   "devDependencies": {
