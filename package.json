@@ -35,7 +35,7 @@
     "zigbee-herdsman-converters": "^14.0.202"
   },
   "devDependencies": {
-    "@types/node": "^16.4.1",
+    "@types/node": "^16.4.6",
     "@typescript-eslint/eslint-plugin": "^4.28.4",
     "@typescript-eslint/parser": "^4.28.4",
     "eslint": "^7.31.0",
