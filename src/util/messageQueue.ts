@@ -1,5 +1,7 @@
-import { Logger } from 'homebridge';
 import assert from 'assert';
+
+import { Logger } from 'homebridge';
+import { isNativeError } from 'util/types';
 
 export class DeferredPromise<T> implements Promise<T> {
   [Symbol.toStringTag]: 'Promise';
@@ -107,7 +109,9 @@ export class MessageQueue<KEY, RESPONSE> {
     try {
       return await Promise.all(waitPromises);
     } catch (e) {
-      this.log.debug('messageQueue:', e.message);
+      if (isNativeError(e)){
+        this.log.debug('messageQueue:', e.message);
+      }
       return [];
     }
   }

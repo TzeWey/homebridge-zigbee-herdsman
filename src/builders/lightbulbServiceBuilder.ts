@@ -4,6 +4,7 @@ import {
   CharacteristicGetCallback,
   CharacteristicSetCallback,
 } from 'homebridge';
+import { isNativeError } from 'util/types';
 
 import { ZigbeeAccessory } from '../accessories';
 import { ServiceBuilder } from './serviceBuilder';
@@ -28,7 +29,9 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
           this.debugState('setOn', state);
           callback();
         } catch (e) {
-          callback(e);
+          if (isNativeError(e)) {
+            callback(e);
+          }
         }
       });
 
@@ -40,7 +43,9 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
           this.debugState('getOnOffState', state);
           callback(null, state);
         } catch (e) {
-          callback(e);
+          if (isNativeError(e)) {
+            callback(e);
+          }
         }
       });
 
@@ -59,7 +64,9 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
           this.debugState('Brightness SET', state.brightness_percent);
           callback();
         } catch (e) {
-          callback(e);
+          if (isNativeError(e)) {
+            callback(e);
+          }
         }
       });
 
@@ -71,7 +78,9 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
           this.debugState('Brightness GET', brightness_percent);
           callback(null, brightness_percent);
         } catch (e) {
-          callback(e);
+          if (isNativeError(e)) {
+            callback(e);
+          }
         }
       });
     return this;
@@ -88,7 +97,9 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
           await this.setColorTemperature(colorTemperature);
           callback();
         } catch (e) {
-          callback(e);
+          if (isNativeError(e)) {
+            callback(e);
+          }
         }
       });
 
@@ -99,7 +110,9 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
           const color_temp = await this.getColorTemperature();
           callback(null, color_temp);
         } catch (e) {
-          callback(e);
+          if (isNativeError(e)) {
+            callback(e);
+          }
         }
       });
 
@@ -117,7 +130,9 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
           await this.setHue(hue);
           callback();
         } catch (e) {
-          callback(e);
+          if (isNativeError(e)) {
+            callback(e);
+          }
         }
       });
 
@@ -128,7 +143,9 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
           const hue = await this.getHue();
           callback(null, hue);
         } catch (e) {
-          callback(e);
+          if (isNativeError(e)) {
+            callback(e);
+          }
         }
       });
 
@@ -184,7 +201,9 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
           await this.setColorRGB(r, g, b);
           callback();
         } catch (e) {
-          callback(e);
+          if (isNativeError(e)) {
+            callback(e);
+          }
         }
       });
 
@@ -198,7 +217,9 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
           this.service.updateCharacteristic(Characteristic.Hue, hsbType.hue);
           callback(null, hsbType.saturation);
         } catch (e) {
-          callback(e);
+          if (isNativeError(e)) {
+            callback(e);
+          }
         }
       });
 
@@ -216,7 +237,9 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
           await this.setSaturation(saturation);
           callback();
         } catch (e) {
-          callback(e);
+          if (isNativeError(e)) {
+            callback(e);
+          }
         }
       });
     this.service
@@ -226,7 +249,9 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
           const saturation = await this.getSaturation();
           callback(null, saturation);
         } catch (e) {
-          callback(e);
+          if (isNativeError(e)) {
+            callback(e);
+          }
         }
       });
 

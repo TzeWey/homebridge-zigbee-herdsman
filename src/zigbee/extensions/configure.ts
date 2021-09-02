@@ -1,9 +1,10 @@
-import { ZigbeeHerdsmanPlatform } from '../../platform';
+import { isNativeError } from 'util/types';
 import { DeviceJoinedPayload } from 'zigbee-herdsman/dist/controller/events';
 import { getConfigureKey } from 'zigbee-herdsman-converters';
 
 import { Zigbee } from '../zigbee';
 import { ZigbeeEntity, Endpoint, Events } from '../types';
+import { ZigbeeHerdsmanPlatform } from '../../platform';
 
 export class ZigbeeConfigure {
   private log = this.platform.log;
@@ -120,8 +121,11 @@ export class ZigbeeConfigure {
     } catch (error) {
       this.attempts[ieeeAddr]++;
       const attempt = this.attempts[ieeeAddr];
-      const msg = `Failed to configure '${entityName}' [${entityDescription}], attempt ${attempt} (${error.stack})`;
-      this.log.error(msg);
+
+      if (isNativeError(error)){
+        const msg = `Failed to configure '${entityName}' [${entityDescription}], attempt ${attempt} (${error.stack})`;
+        this.log.error(msg);
+      }
 
       if (throwError) {
         throw error;
