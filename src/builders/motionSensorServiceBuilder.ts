@@ -16,7 +16,7 @@ export class MotionSensorServiceBuilder extends ServiceBuilder {
     this.service
       .getCharacteristic(Characteristic.MotionDetected)
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
-        callback(null, this.zigbeeAccessory.state.occupancy);
+        callback(null, this.zigbeeAccessory.state.occupancy || false);
       });
 
     this.zigbeeAccessory.on(Events.stateUpdate, (state: { occupancy?: boolean }) => {
