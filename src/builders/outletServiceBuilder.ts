@@ -4,7 +4,7 @@ import {
   CharacteristicGetCallback,
   CharacteristicSetCallback,
 } from 'homebridge';
-import { isNativeError } from 'util/types';
+import { types } from 'util';
 
 import { ZigbeeAccessory } from '../accessories';
 import { ServiceBuilder } from './serviceBuilder';
@@ -28,7 +28,7 @@ export class OutletServiceBuilder extends ServiceBuilder {
           await this.setOn(on);
           callback();
         } catch (e) {
-          if (isNativeError(e)) {
+          if (types.isNativeError(e)) {
             callback(e);
           }
         }
@@ -39,7 +39,7 @@ export class OutletServiceBuilder extends ServiceBuilder {
           this.debugState('getOnOffState', value);
           callback(null, value);
         } catch (e) {
-          if (isNativeError(e)) {
+          if (types.isNativeError(e)) {
             callback(e);
           }
         }

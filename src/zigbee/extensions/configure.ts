@@ -1,4 +1,4 @@
-import { isNativeError } from 'util/types';
+import { types } from 'util';
 import { DeviceJoinedPayload } from 'zigbee-herdsman/dist/controller/events';
 import { getConfigureKey } from 'zigbee-herdsman-converters';
 
@@ -122,7 +122,7 @@ export class ZigbeeConfigure {
       this.attempts[ieeeAddr]++;
       const attempt = this.attempts[ieeeAddr];
 
-      if (isNativeError(error)){
+      if (types.isNativeError(error)){
         const msg = `Failed to configure '${entityName}' [${entityDescription}], attempt ${attempt} (${error.stack})`;
         this.log.error(msg);
       }
