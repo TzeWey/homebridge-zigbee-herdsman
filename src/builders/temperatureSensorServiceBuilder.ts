@@ -17,7 +17,7 @@ export class TemperatureSensorServiceBuilder extends ServiceBuilder {
     this.service
       .getCharacteristic(Characteristic.CurrentTemperature)
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
-        callback(null, this.zigbeeAccessory.state.temperature);
+        callback(null, this.zigbeeAccessory.state.temperature || 0);
       });
 
     this.zigbeeAccessory.on(Events.stateUpdate, (state: { temperature?: number }) => {

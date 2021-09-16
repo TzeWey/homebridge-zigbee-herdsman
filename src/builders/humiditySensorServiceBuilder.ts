@@ -17,7 +17,7 @@ export class HumiditySensorServiceBuilder extends ServiceBuilder {
     this.service
       .getCharacteristic(Characteristic.CurrentRelativeHumidity)
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
-        callback(null, this.zigbeeAccessory.state.humidity);
+        callback(null, this.zigbeeAccessory.state.humidity || 0);
       });
 
     this.zigbeeAccessory.on(Events.stateUpdate, (state: { humidity?: number }) => {
