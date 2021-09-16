@@ -94,3 +94,7 @@ export interface ZigbeeEntity {
   definition?: ZigbeeDefinition;
   settings?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
+
+export interface ConvertOptions {
+  occupancy_timeout?: number;
+}
