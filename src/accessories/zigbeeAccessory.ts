@@ -5,7 +5,7 @@ import assert from 'assert';
 import stringify from 'json-stable-stringify-without-jsonify';
 
 import { ZigbeeHerdsmanPlatform } from '../platform';
-import { Zigbee, ZigbeeEntity, Device, Options, Meta, MessagePayload } from '../zigbee';
+import { Zigbee, ZigbeeEntity, Device, Options, Meta, MessagePayload, ConvertOptions } from '../zigbee';
 import { getEndpointNames, objectHasProperties, secondsToMilliseconds } from '../util/utils';
 import { peekNextTransactionSequenceNumber } from '../util/zcl';
 import { MessageQueue } from '../util/messageQueue';
@@ -70,6 +70,11 @@ export abstract class ZigbeeAccessory extends EventEmitter {
     return this.accessory.context;
   }
 
+  public get options(): ConvertOptions {
+    // TODO: make this part of 'accessory.context'
+    return { occupancy_timeout: 300 };
+  }
+
   public get name(): string {
     return this.device.modelID || this.accessory.displayName;
   }
@@ -131,7 +136,7 @@ export abstract class ZigbeeAccessory extends EventEmitter {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private getMessagePayload(data: MessagePayload, publish: (...args: any[]) => void, options: Options = {}): any {
+  private getMessagePayload(data: MessagePayload, publish: (...args: any[]) => void): any {
     const payload = {};
     const resolvedEntity = this.zigbeeEntity;
 
@@ -155,7 +160,7 @@ export abstract class ZigbeeAccessory extends EventEmitter {
 
     const meta: Meta = { device: data.device, logger: this.log };
     converters.forEach((converter) => {
-      const converted = converter.convert(resolvedEntity.definition, data, publish, options, meta);
+      const converted = converter.convert(resolvedEntity.definition, data, publish, this.options, meta);
       if (converted) {
         Object.assign(payload, converted);
       }
@@ -198,8 +203,8 @@ export abstract class ZigbeeAccessory extends EventEmitter {
         if (getEndpointNames().includes(possibleEndpointName)) {
           endpointName = possibleEndpointName;
           key = key.substring(0, underscoreIndex);
-          const device = target.getDevice();
-          actualTarget = device.getEndpoint(definition.endpoint(device)[endpointName]);
+          const targetDevice = target.getDevice();
+          actualTarget = targetDevice.getEndpoint(definition.endpoint(targetDevice)[endpointName]);
 
           if (!actualTarget) {
             this.log.error(`Device '${resolvedEntity.name}' has no endpoint '${endpointName}'`);

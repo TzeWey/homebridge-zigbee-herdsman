@@ -18,7 +18,7 @@ export abstract class ServiceBuilder {
    * Public Common Functions
    */
   public async setOn(on: boolean) {
-    return await this.zigbeeAccessory.setDeviceState({ state: on ? 'ON' : 'OFF' });
+    return this.zigbeeAccessory.setDeviceState({ state: on ? 'ON' : 'OFF' });
   }
 
   public async getOnOffState() {
@@ -38,7 +38,7 @@ export abstract class ServiceBuilder {
   }
 
   public async setColorTemperature(colorTemperature: number) {
-    return await this.zigbeeAccessory.setDeviceState({ color_temp: colorTemperature });
+    return this.zigbeeAccessory.setDeviceState({ color_temp: colorTemperature });
   }
 
   public async getColorTemperature() {
@@ -47,7 +47,7 @@ export abstract class ServiceBuilder {
   }
 
   public async setHue(hue: number) {
-    return await this.zigbeeAccessory.setDeviceState({ color: { hue } });
+    return this.zigbeeAccessory.setDeviceState({ color: { hue } });
   }
 
   public async getHue() {
@@ -56,7 +56,7 @@ export abstract class ServiceBuilder {
   }
 
   public async setColorXY(x: number, y: number) {
-    return await this.zigbeeAccessory.setDeviceState({ color: { x, y } });
+    return this.zigbeeAccessory.setDeviceState({ color: { x, y } });
   }
 
   public async getColorXY() {
@@ -65,11 +65,11 @@ export abstract class ServiceBuilder {
   }
 
   public async setColorRGB(r: number, g: number, b: number) {
-    return await this.zigbeeAccessory.setDeviceState({ color: { rgb: `${r},${g},${b}` } });
+    return this.zigbeeAccessory.setDeviceState({ color: { rgb: `${r},${g},${b}` } });
   }
 
   public async setSaturation(saturation: number) {
-    return await this.zigbeeAccessory.setDeviceState({ color: { s: saturation } });
+    return this.zigbeeAccessory.setDeviceState({ color: { s: saturation } });
   }
 
   public async getSaturation() {
