@@ -32,7 +32,7 @@
     "js-big-decimal": "^1.3.4",
     "json-stable-stringify-without-jsonify": "^1.0.1",
     "zigbee-herdsman": "^0.13.165",
-    "zigbee-herdsman-converters": "^14.0.307",
+    "zigbee-herdsman-converters": "^14.0.308",
     "ansi-regex": ">=5.0.1"
   },
   "devDependencies": {
