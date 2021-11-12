@@ -72,7 +72,7 @@ export abstract class ZigbeeAccessory extends EventEmitter {
 
   public get options(): ConvertOptions {
     // TODO: make this part of 'accessory.context'
-    return { occupancy_timeout: 300 };
+    return { occupancy_timeout: 60 };
   }
 
   public get name(): string {
