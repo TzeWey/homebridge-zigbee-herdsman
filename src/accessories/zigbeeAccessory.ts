@@ -324,8 +324,8 @@ export abstract class ZigbeeAccessory extends EventEmitter {
       });
       this.log.debug(`RX ${responses.length} message(s) from device ${this.name}`);
 
-      if (responses.length === 0) {
-        throw new Error('No response received from device');
+      if (responses.length !== responseKeys.length) {
+        throw new Error('Did not receive all responses from device');
       }
 
       responses.forEach((response) => {
