@@ -36,7 +36,7 @@ export class ZigbeeConfigure {
     }
   }
 
-  private onDeviceJoined(data: DeviceJoinedPayload, entity: ZigbeeEntity) {
+  private async onDeviceJoined(data: DeviceJoinedPayload, entity: ZigbeeEntity) {
     const device = data.device;
     const meta = device.meta;
 
@@ -50,24 +50,34 @@ export class ZigbeeConfigure {
     }
 
     if (this.shouldConfigure(entity, Events.deviceJoined)) {
-      this.configure(entity);
+      await this.configure(entity);
     }
   }
 
-  private onMessage(_, entity: ZigbeeEntity) {
+  private async onMessage(_, entity: ZigbeeEntity) {
     if (!entity || !(entity instanceof ZigbeeDevice)) {
       return false;
     }
 
     if (this.shouldConfigure(entity, Events.message)) {
-      this.configure(entity);
+      await this.configure(entity);
     }
   }
 
   private shouldConfigure(entity: ZigbeeDevice, event: Events) {
+    const entityName = entity.name;
+
     if (!entity.definition) {
-      const entityName = entity.name;
       this.log.error(`Failed to configure '${entityName}', entity has no definition!`);
+      return false;
+    }
+
+    const entityDescription = entity.definition.description;
+
+    if (!entity.definition.configure) {
+      this.log.error(
+        `Failed to configure '${entityName}' [${entityDescription}], entity definition has no method 'configure'`,
+      );
       return false;
     }
 
@@ -88,16 +98,17 @@ export class ZigbeeConfigure {
     return true;
   }
 
-  private async configure(entity: ZigbeeDevice, force = false, throwError = false) {
-    if (!entity.definition) {
-      return false;
-    }
-
+  private async configure(entity: ZigbeeDevice) {
     const entityName = entity.name;
+    const entityDescription = entity.definition?.description;
     const device = entity.zh;
     const ieeeAddr = device.ieeeAddr;
 
-    if (this.configuring.has(ieeeAddr) || (this.attempts[ieeeAddr] >= 3 && !force)) {
+    if (!entity.definition?.configure) {
+      return;
+    }
+
+    if (this.configuring.has(ieeeAddr) || this.attempts[ieeeAddr] >= 3) {
       return false;
     }
 
@@ -105,15 +116,6 @@ export class ZigbeeConfigure {
 
     if (!this.attempts.has(ieeeAddr)) {
       this.attempts[ieeeAddr] = 0;
-    }
-
-    const entityDescription = entity.definition.description;
-
-    if (!entity.definition.configure) {
-      this.log.error(
-        `Failed to configure '${entityName}' [${entityDescription}], entity definition has no method 'configure'`,
-      );
-      return false;
     }
 
     try {
@@ -129,10 +131,6 @@ export class ZigbeeConfigure {
       if (types.isNativeError(error)) {
         const msg = `Failed to configure '${entityName}' [${entityDescription}], attempt ${attempt} (${error.stack})`;
         this.log.error(msg);
-      }
-
-      if (throwError) {
-        throw error;
       }
     }
 

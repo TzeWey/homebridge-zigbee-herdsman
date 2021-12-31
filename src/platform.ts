@@ -99,7 +99,7 @@ export class PluginPlatform implements DynamicPlatformPlugin {
     const zigbeeAccessory = this.zigbeeAccessories.get(uuid);
 
     if (!zigbeeAccessory) {
-      this.log.debug(`could not find accessory '${uuid}' [${entity.ieeeAddr}]`);
+      this.log.debug(`Could not find accessory '${uuid}' [${entity.ieeeAddr}]`);
       return null;
     }
 

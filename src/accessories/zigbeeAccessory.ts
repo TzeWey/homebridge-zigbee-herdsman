@@ -57,7 +57,7 @@ export abstract class ZigbeeAccessory extends EventEmitter {
     const entity = this.zigbee.resolveEntity(device);
 
     if (!entity) {
-      this.log.error(`ZigbeeAccessory: failed to resolve device ${device.ieeeAddr}`);
+      this.log.error(`ZigbeeAccessory: Failed to resolve device '${device.ieeeAddr}'`);
       this.zigbeeEntity = undefined!;
       return;
     }
@@ -111,11 +111,10 @@ export abstract class ZigbeeAccessory extends EventEmitter {
     this.emit(Events.identify);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private updateState(state: any, emitEvents = true) {
-    this.log.debug(`Updating state of device ${this.name} with `, state);
+  private updateState(state: KeyValue, emitEvents = true) {
+    this.log.debug(`Updating state of device '${this.name}' with `, state);
     Object.assign(this.state, state);
-    this.log.debug(`Updated state for device ${this.name} is now `, this.state);
+    this.log.debug(`Updated state for device '${this.name}' is now `, this.state);
     if (emitEvents) {
       this.emit(Events.stateUpdate, state);
     }
@@ -131,7 +130,7 @@ export abstract class ZigbeeAccessory extends EventEmitter {
 
     if (!processed) {
       const state = this.getMessagePayload(message, this.messagePublish);
-      this.log.debug(`Decoded state for '${message.device.modelID}' from incoming message`, state);
+      this.log.debug(`Decoded state for '${this.name}' from incoming message`, state);
       if (state) {
         this.messagePublish(state);
       }
@@ -291,33 +290,34 @@ export abstract class ZigbeeAccessory extends EventEmitter {
         mapped: definition,
       };
 
-      try {
-        if (type === 'set' && converter.convertSet) {
-          this.log.debug(`Publishing '${type}' '${key}' with '${value}' to '${entity.name}'`);
-          const result = await converter.convertSet(localTarget, key, value, meta);
-          this.legacyRetrieveState(entity, converter, result, localTarget, key, meta);
-        } else if (type === 'get' && converter.convertGet) {
-          const sequenceNumber = peekNextTransactionSequenceNumber();
-          const messageKey = `${device.ieeeAddr}|${endpointID}|${sequenceNumber}`;
-          this.log.debug(`Publishing '${type}' '${key}' to '${entity.name}' with message key '${messageKey}'`);
-          responseKeys.push(this.messageQueue.enqueue(messageKey));
-          await converter.convertGet(localTarget, key, meta);
-        } else {
-          this.log.error(`No converter available for '${type}' '${key}' (${value})`);
-          continue;
-        }
-      } catch (error) {
-        const message = `Publish '${type}' '${key}' to '${entity.name}' failed: '${error}'`;
-        this.log.error(message);
+      if (type === 'set' && converter.convertSet) {
+        this.log.debug(`Publishing '${type}' '${key}' with '${value}' to '${this.name}'`);
+        const result = (await converter.convertSet(localTarget, key, value, meta).catch((error) => {
+          const message = `Publish '${type}' '${key}' to '${this.name}' failed: '${error}'`;
+          this.log.error(message);
+        })) as ToZigbeeConverterResult;
+        this.legacyRetrieveState(entity, converter, result, localTarget, key, meta);
+      } else if (type === 'get' && converter.convertGet) {
+        const sequenceNumber = peekNextTransactionSequenceNumber();
+        const messageKey = `${device.ieeeAddr}|${endpointID}|${sequenceNumber}`;
+        this.log.debug(`Publishing '${type}' '${key}' to '${this.name}' with message key '${messageKey}'`);
+        responseKeys.push(this.messageQueue.enqueue(messageKey));
+        await converter.convertGet(localTarget, key, meta).catch((error) => {
+          const message = `Publish '${type}' '${key}' to '${this.name}' failed: '${error}'`;
+          this.log.error(message);
+        });
+      } else {
+        this.log.error(`No converter available for '${type}' '${key}' (${value})`);
+        continue;
       }
 
       usedConverters[endpointID].push(converter);
     }
 
     if (type === 'get' && responseKeys.length) {
-      this.log.debug(`TX ${responseKeys.length} message(s) to device ${device.modelID}`);
+      this.log.debug(`TX ${responseKeys.length} message(s) to device ${this.name}`);
       const responses = await this.messageQueue.wait(responseKeys);
-      this.log.debug(`RX ${responses.length} message(s) from device ${device.modelID}`);
+      this.log.debug(`RX ${responses.length} message(s) from device ${this.name}`);
 
       if (responses.length === 0) {
         throw new Error('No response received from device');
@@ -325,7 +325,7 @@ export abstract class ZigbeeAccessory extends EventEmitter {
 
       responses.forEach((response) => {
         const payload = this.getMessagePayload(response, this.messagePublish);
-        this.log.debug(`Decoded state for '${device.modelID}' from response message`, payload);
+        this.log.debug(`Decoded state for '${this.name}' from response message`, payload);
 
         // Update accessory state context only
         // Do not emit the state update event to avoid double processing as this was an explicit 'get' request by the caller
@@ -334,7 +334,7 @@ export abstract class ZigbeeAccessory extends EventEmitter {
     }
 
     // Return the accessory state context
-    return <T>this.state;
+    return this.state as T;
   }
 
   public async setDeviceState<T>(state: T, options: Options = {}): Promise<T> {
