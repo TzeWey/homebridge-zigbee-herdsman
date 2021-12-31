@@ -65,19 +65,7 @@ export class ZigbeeConfigure {
   }
 
   private shouldConfigure(entity: ZigbeeDevice, event: Events) {
-    const entityName = entity.name;
-
-    if (!entity.definition) {
-      this.log.error(`Failed to configure '${entityName}', entity has no definition!`);
-      return false;
-    }
-
-    const entityDescription = entity.definition.description;
-
-    if (!entity.definition.configure) {
-      this.log.error(
-        `Failed to configure '${entityName}' [${entityDescription}], entity definition has no method 'configure'`,
-      );
+    if (!entity || !entity.definition || !entity.definition.configure) {
       return false;
     }
 
@@ -104,8 +92,9 @@ export class ZigbeeConfigure {
     const device = entity.zh;
     const ieeeAddr = device.ieeeAddr;
 
+    // Check to satisfy compiler warning, 'configure' is already verified by 'shouldConfigure'
     if (!entity.definition?.configure) {
-      return;
+      return false;
     }
 
     if (this.configuring.has(ieeeAddr) || this.attempts[ieeeAddr] >= 3) {
