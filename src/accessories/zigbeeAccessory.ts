@@ -317,7 +317,11 @@ export abstract class ZigbeeAccessory extends EventEmitter {
 
     if (type === 'get' && responseKeys.length) {
       this.log.debug(`TX ${responseKeys.length} message(s) to device ${this.name}`);
-      const responses = await this.messageQueue.wait(responseKeys);
+      const responses = await this.messageQueue.wait(responseKeys).catch((error) => {
+        const message = `Message 'get' timeout: '${error}'`;
+        this.log.error(message);
+        return [];
+      });
       this.log.debug(`RX ${responses.length} message(s) from device ${this.name}`);
 
       if (responses.length === 0) {
