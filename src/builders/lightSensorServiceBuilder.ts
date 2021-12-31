@@ -10,8 +10,8 @@ export class LightSensorServiceBuilder extends ServiceBuilder {
     const Characteristic = this.platform.Characteristic;
 
     this.service =
-      this.accessory.getService(this.platform.Service.LightSensor) ||
-      this.accessory.addService(this.platform.Service.LightSensor);
+      this.platformAccessory.getService(this.platform.Service.LightSensor) ||
+      this.platformAccessory.addService(this.platform.Service.LightSensor);
 
     this.service
       .getCharacteristic(Characteristic.CurrentAmbientLightLevel)

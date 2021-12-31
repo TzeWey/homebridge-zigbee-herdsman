@@ -14,8 +14,8 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
   constructor(protected readonly zigbeeAccessory: ZigbeeAccessory) {
     super(zigbeeAccessory);
     this.service =
-      this.accessory.getService(this.platform.Service.Lightbulb) ||
-      this.accessory.addService(this.platform.Service.Lightbulb);
+      this.platformAccessory.getService(this.platform.Service.Lightbulb) ||
+      this.platformAccessory.addService(this.platform.Service.Lightbulb);
   }
 
   public withOnOff(): LightbulbServiceBuilder {

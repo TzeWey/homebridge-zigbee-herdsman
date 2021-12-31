@@ -10,8 +10,8 @@ export class MotionSensorServiceBuilder extends ServiceBuilder {
     const Characteristic = this.platform.Characteristic;
 
     this.service =
-      this.accessory.getService(this.platform.Service.MotionSensor) ||
-      this.accessory.addService(this.platform.Service.MotionSensor);
+      this.platformAccessory.getService(this.platform.Service.MotionSensor) ||
+      this.platformAccessory.addService(this.platform.Service.MotionSensor);
 
     this.service
       .getCharacteristic(Characteristic.MotionDetected)

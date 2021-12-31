@@ -7,8 +7,8 @@ export class TemperatureSensorServiceBuilder extends ServiceBuilder {
   constructor(protected readonly zigbeeAccessory: ZigbeeAccessory) {
     super(zigbeeAccessory);
     this.service =
-      this.accessory.getService(this.platform.Service.TemperatureSensor) ||
-      this.accessory.addService(this.platform.Service.TemperatureSensor);
+      this.platformAccessory.getService(this.platform.Service.TemperatureSensor) ||
+      this.platformAccessory.addService(this.platform.Service.TemperatureSensor);
   }
 
   public withTemperature(): TemperatureSensorServiceBuilder {

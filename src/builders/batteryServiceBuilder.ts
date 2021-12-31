@@ -10,8 +10,8 @@ export class BatteryServiceBuilder extends ServiceBuilder {
     const Characteristic = this.platform.Characteristic;
 
     this.service =
-      this.accessory.getService(this.platform.Service.BatteryService) ||
-      this.accessory.addService(this.platform.Service.BatteryService);
+      this.platformAccessory.getService(this.platform.Service.Battery) ||
+      this.platformAccessory.addService(this.platform.Service.Battery);
 
     // BatteryLevel, assume 100% battery if uninitialized
     this.service
