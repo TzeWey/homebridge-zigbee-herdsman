@@ -125,6 +125,7 @@ export abstract class ZigbeeAccessory extends EventEmitter {
 
     if (message.type === 'readResponse') {
       const messageKey = `${message.device.ieeeAddr}|${message.endpoint.ID}|${message.meta.zclTransactionSequenceNumber}`;
+      this.log.debug(`Processing synchronous response for message '${messageKey}'`);
       processed = this.messageQueue.processMessage(messageKey, message);
     }
 
