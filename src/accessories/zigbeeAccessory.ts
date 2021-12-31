@@ -303,7 +303,8 @@ export abstract class ZigbeeAccessory extends EventEmitter {
         const messageKey = `${device.ieeeAddr}|${endpointID}|${sequenceNumber}`;
         this.log.debug(`Publishing '${type}' '${key}' to '${this.name}' with message key '${messageKey}'`);
         responseKeys.push(this.messageQueue.enqueue(messageKey));
-        await converter.convertGet(localTarget, key, meta).catch((error) => {
+        // TODO: fix this, as we are currently relying on the message to get published before we 'wait', possible race condition
+        converter.convertGet(localTarget, key, meta).catch((error) => {
           const message = `Publish '${type}' '${key}' to '${this.name}' failed: '${error}'`;
           this.log.error(message);
         });
