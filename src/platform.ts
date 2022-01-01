@@ -224,7 +224,7 @@ export class PluginPlatform implements DynamicPlatformPlugin {
   private async onZigbeeMessage(data: MessagePayload, entity: ZigbeeEntity) {
     const zigbeeAccessory = this.getZigbeeAccessory(entity);
     if (zigbeeAccessory === null) {
-      this.log.debug(`> ZigbeeAccessory instance for '${entity.ID}' not found`);
+      this.log.warn(`> ZigbeeAccessory instance for '${entity.ID}' not found`);
     }
     await zigbeeAccessory?.processMessage(data);
   }

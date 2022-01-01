@@ -20,7 +20,7 @@ import {
   ToZigbeeConverter,
   ZigbeeDevice,
 } from '../zigbee';
-import { getEndpointNames, secondsToMilliseconds, objectHasProperty } from '../util/utils';
+import { getEndpointNames, secondsToMilliseconds, objectHasProperty, getMessageKey } from '../util/utils';
 import { peekNextTransactionSequenceNumber } from '../util/zcl';
 import { MessageQueue } from '../util/messageQueue';
 import { Events } from '.';
@@ -124,8 +124,8 @@ export abstract class ZigbeeAccessory extends EventEmitter {
     let processed = false;
 
     if (message.type === 'readResponse') {
-      const messageKey = `${message.device.ieeeAddr}|${message.endpoint.ID}|${message.meta.zclTransactionSequenceNumber}`;
-      this.log.debug(`Processing synchronous response for message '${messageKey}'`);
+      const messageKey = getMessageKey(message.device, message.endpoint, message.meta.zclTransactionSequenceNumber);
+      this.log.debug(`Processing synchronous response for message key '${messageKey}'`);
       processed = this.messageQueue.processMessage(messageKey, message);
     }
 
@@ -250,18 +250,19 @@ export abstract class ZigbeeAccessory extends EventEmitter {
     for (const [keyIn, value] of this.getEntries(state)) {
       let key = keyIn;
       let endpointName = target.ID.toString();
-      let localTarget = target;
+      let localTarget: Endpoint = target;
 
       // When the key has a endpointName included (e.g. state_right), this will override the target.
       const propertyEndpointMatch = key.match(propertyEndpointRegex);
       if (propertyEndpointMatch) {
         endpointName = propertyEndpointMatch[2];
         key = propertyEndpointMatch[1];
-        localTarget = entity.endpoint(endpointName);
-        if (localTarget === null) {
+        const tempTarget = entity.endpoint(endpointName);
+        if (tempTarget === null) {
           this.log.error(`Device '${entity.name}' has no endpoint '${endpointName}'`);
           continue;
         }
+        localTarget = tempTarget;
       }
 
       const endpointID = localTarget.ID;
@@ -292,24 +293,31 @@ export abstract class ZigbeeAccessory extends EventEmitter {
       };
 
       if (type === 'set' && converter.convertSet) {
+        // Invoke converter to parse received value
         this.log.debug(`Publishing '${type}' '${key}' with '${value}' to '${this.name}'`);
         const result = (await converter.convertSet(localTarget, key, value, meta).catch((error) => {
           const message = `Publish '${type}' '${key}' to '${this.name}' failed: '${error}'`;
           this.log.error(message);
         })) as ToZigbeeConverterResult;
+
+        // Invoke the legacy state retrieve handler
         this.legacyRetrieveState(entity, converter, result, localTarget, key, meta);
       } else if (type === 'get' && converter.convertGet) {
+        // Compute message key using expected message sequence number
         const sequenceNumber = peekNextTransactionSequenceNumber();
-        const messageKey = `${device.ieeeAddr}|${endpointID}|${sequenceNumber}`;
+        const messageKey = getMessageKey(device, localTarget, sequenceNumber);
         this.log.debug(`Publishing '${type}' '${key}' to '${this.name}' with message key '${messageKey}'`);
+
+        // Enqueue message key to correlate received responses
         responseKeys.push(this.messageQueue.enqueue(messageKey));
-        // TODO: fix messageQueue, we currently rely on the message to get published before we 'wait', possible race condition when the
-        // devices responds faster than we can publish the 'get' messages (fails when we 'await' convertGet)
-        converter.convertGet(localTarget, key, meta).catch((error) => {
+
+        // Call converter routine to publish message
+        await converter.convertGet(localTarget, key, meta).catch((error) => {
           const message = `Publish '${type}' '${key}' to '${this.name}' failed: '${error}'`;
           this.log.error(message);
         });
       } else {
+        // No converters available for state
         this.log.error(`No converter available for '${type}' '${key}' (${value})`);
         continue;
       }
@@ -317,6 +325,7 @@ export abstract class ZigbeeAccessory extends EventEmitter {
       usedConverters[endpointID].push(converter);
     }
 
+    // Wait for any response messages if necessary
     if (type === 'get' && responseKeys.length) {
       this.log.debug(`TX ${responseKeys.length} message(s) to device ${this.name}`);
       const responses = await this.messageQueue.wait(responseKeys).catch((error) => {

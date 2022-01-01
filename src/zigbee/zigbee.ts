@@ -246,7 +246,6 @@ export class Zigbee extends EventEmitter {
     } else if (typeof key === 'string' && key.toLowerCase() === 'coordinator') {
       return this.resolveDevice(this.herdsman.getDevicesByType('Coordinator')[0].ieeeAddr);
     } else {
-      // TODO: Group support
       this.log.warn('Failed to resolve entity: ', key);
       return null;
     }

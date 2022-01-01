@@ -1,5 +1,7 @@
 import humanizeDuration from 'humanize-duration';
 
+import { Device, Endpoint } from '../zigbee';
+
 // construct a local ISO8601 string (instead of UTC-based)
 // Example:
 //  - ISO8601 (UTC) = 2019-03-01T15:32:45.941+0000
@@ -132,3 +134,6 @@ export function objectHasProperties(object: any, properties: string[]): boolean 
 }
 
 export const secondsToMilliseconds = (seconds: number) => seconds * 1000;
+
+export const getMessageKey = (device: Device, endpoint: Endpoint, sequenceNumber?: number) =>
+  `${device.ieeeAddr}|${endpoint.ID}|${sequenceNumber}`;
