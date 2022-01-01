@@ -16,10 +16,7 @@ import { Extension } from './extension';
 import { PluginPlatform } from '../../platform';
 
 export class ExtensionHomebridge extends Extension {
-  // Used to track any cached accessories
-  private readonly accessories = new Map<string, PlatformAccessory>();
   private readonly zigbeeAccessories = new Map<string, ZigbeeAccessory>();
-
   private readonly zigbeeAccessoryResolver: ZigbeeAccessoryResolver;
 
   constructor(platform: PluginPlatform, zigbee: Zigbee) {
@@ -28,7 +25,6 @@ export class ExtensionHomebridge extends Extension {
   }
 
   public async start(): Promise<void> {
-    this.registerEventHandler(Events.configureAccessory, this.onConfigureAccessory.bind(this));
     this.registerEventHandler(Events.adapterDisconnected, this.onZigbeeAdapterDisconnected.bind(this));
     this.registerEventHandler(Events.message, this.onZigbeeMessage.bind(this));
     this.registerEventHandler(Events.started, this.onZigbeeStarted.bind(this));
@@ -50,7 +46,7 @@ export class ExtensionHomebridge extends Extension {
     const uuids = zigbeeDevices.map((e) => this.platform.api.hap.uuid.generate(e.ieeeAddr));
 
     this.log.info('Homebridge: Cleaning up any stale accessories...');
-    this.accessories.forEach((cachedAccessory) => {
+    this.platform.accessories.forEach((cachedAccessory) => {
       if (!uuids.includes(cachedAccessory.UUID)) {
         this.log.info('Homebridge: Removing existing accessory from cache: ', cachedAccessory.displayName);
         this.platform.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [cachedAccessory]);
@@ -58,7 +54,7 @@ export class ExtensionHomebridge extends Extension {
       }
     });
 
-    removed.forEach((uuid) => this.accessories.delete(uuid));
+    removed.forEach((uuid) => this.platform.accessories.delete(uuid));
   }
 
   private async configureDevice(device: Device, entity: ZigbeeEntity) {
@@ -76,7 +72,7 @@ export class ExtensionHomebridge extends Extension {
     const uuid = this.platform.api.hap.uuid.generate(device.ieeeAddr);
     this.log.info(`Homebridge: Initializing device ${device.ieeeAddr} [${uuid}]`);
 
-    const accessory = this.accessories.get(uuid);
+    const accessory = this.platform.accessories.get(uuid);
     if (accessory) {
       this.addExistingAccessory(uuid, device, accessory, factory);
     } else {
@@ -122,9 +118,14 @@ export class ExtensionHomebridge extends Extension {
     this.zigbeeAccessories.set(uuid, zigbeeAccessory);
     this.log.info('Homebridge: > Registering new accessory: ', zigbeeAccessory.vendor, zigbeeAccessory.description);
     this.platform.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newAccessory]);
-    this.accessories.set(newAccessory.UUID, newAccessory);
+    this.platform.accessories.set(newAccessory.UUID, newAccessory);
   }
 
+  /**
+   * Get the ZigbeeAccessory associated with the ZigbeeEntity
+   * @param entity
+   * @returns the ZigbeeAccessory instance
+   */
   private getZigbeeAccessory(entity: ZigbeeEntity): ZigbeeAccessory | null {
     if (!(entity instanceof ZigbeeDevice)) {
       return null;
@@ -144,11 +145,6 @@ export class ExtensionHomebridge extends Extension {
   /**********************************
    * Internal Event Handlers
    **********************************/
-  private async onConfigureAccessory(accessory: PlatformAccessory) {
-    this.log.info('Homebridge: Loading accessory from cache: ', accessory.displayName);
-    this.accessories.set(accessory.UUID, accessory);
-  }
-
   private async onZigbeeStarted() {
     this.cleanupDevices();
 
@@ -172,11 +168,11 @@ export class ExtensionHomebridge extends Extension {
   private async onZigbeeDeviceLeave(data: DeviceLeavePayload) {
     const ieeeAddr = data.ieeeAddr;
     const uuid = this.platform.api.hap.uuid.generate(ieeeAddr);
-    const existingAccessory = this.accessories.get(uuid);
+    const existingAccessory = this.platform.accessories.get(uuid);
     if (existingAccessory) {
       this.log.info('Homebridge: Removing accessory from cache: ', existingAccessory.displayName);
       this.platform.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
-      this.accessories.delete(uuid);
+      this.platform.accessories.delete(uuid);
     }
   }
 

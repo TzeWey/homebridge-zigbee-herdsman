@@ -31,6 +31,7 @@ export class PluginPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service = this.api.hap.Service;
   public readonly Characteristic: typeof Characteristic = this.api.hap.Characteristic;
 
+  public readonly accessories = new Map<string, PlatformAccessory>();
   public readonly zigbee: Zigbee;
 
   constructor(public readonly log: Logger, public readonly config: PluginPlatformConfig, public readonly api: API) {
@@ -62,7 +63,8 @@ export class PluginPlatform implements DynamicPlatformPlugin {
    * It should be used to setup event handlers for characteristics and update respective values.
    */
   configureAccessory(accessory: PlatformAccessory) {
-    this.zigbee.emit(Events.configureAccessory, accessory);
+    this.log.info('Homebridge: Loading accessory from cache: ', accessory.displayName);
+    this.accessories.set(accessory.UUID, accessory);
   }
 
   private async start() {

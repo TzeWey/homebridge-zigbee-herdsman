@@ -7,7 +7,6 @@ import { KeyValue, ToZigbeeConverterGetMeta } from './zhc';
 export enum Events {
   started = 'started',
   stop = 'stop',
-  configureAccessory = 'configureAccessory',
 
   // Events from zigbee-herdsman/dist/controller/events
   message = 'message',
