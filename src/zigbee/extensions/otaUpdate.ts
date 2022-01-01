@@ -1,11 +1,11 @@
-import { PluginPlatform } from '../../platform';
 import { MessagePayload } from 'zigbee-herdsman/dist/controller/events';
 import { tradfri } from 'zigbee-herdsman-converters/lib/ota';
 
-import { Zigbee, ZigbeeEntity, Events, ZigbeeDevice } from '..';
+import { ZigbeeEntity, Events, ZigbeeDevice } from '..';
 
-export class ZigbeeOtaUpdate {
-  private log = this.platform.log;
+import { Extension } from './extension';
+
+export class ExtensionOtaUpdate extends Extension {
   private inProgress = new Set();
   private lastChecked: Map<string, Date> = new Map();
 
@@ -13,9 +13,8 @@ export class ZigbeeOtaUpdate {
   private ota_disable_automatic_update_check = false;
   private ota_update_check_interval = 1440; // 1 day
 
-  constructor(private readonly platform: PluginPlatform, private readonly zigbee: Zigbee) {
-    this.zigbee.on(Events.message, this.onMessage.bind(this));
-    this.log.info(`Registered extension '${this.constructor.name}'`);
+  public async start(): Promise<void> {
+    this.registerEventHandler(Events.message, this.onMessage.bind(this));
 
     if (this.ota_ikea_ota_use_test_url) {
       tradfri.useTestURL();

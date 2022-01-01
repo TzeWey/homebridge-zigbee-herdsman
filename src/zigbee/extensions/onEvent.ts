@@ -1,22 +1,20 @@
-import { PluginPlatform } from '../../platform';
 import { MessagePayload } from 'zigbee-herdsman/dist/controller/events';
 import { onEvent as LegacyOnEvent } from 'zigbee-herdsman-converters';
 
-import { Zigbee, ZigbeeEntity, Events, ZigbeeDevice } from '..';
+import { ZigbeeEntity, Events, ZigbeeDevice } from '..';
 
-export class ZigbeeOnEvent {
-  private log = this.platform.log;
+import { Extension } from './extension';
 
-  constructor(private readonly platform: PluginPlatform, private readonly zigbee: Zigbee) {
-    this.zigbee.on(Events.started, this.onStarted.bind(this));
-    this.zigbee.on(Events.stop, this.onStop.bind(this));
-    this.zigbee.on(Events.message, this.onMessage.bind(this));
-    this.zigbee.on(Events.adapterDisconnected, this.onAdapterDisconnected.bind(this));
-    this.zigbee.on(Events.deviceJoined, this.onDeviceJoined.bind(this));
-    this.zigbee.on(Events.deviceInterview, this.onDeviceInterview.bind(this));
-    this.zigbee.on(Events.deviceAnnounce, this.onDeviceAnnounce.bind(this));
-    this.zigbee.on(Events.deviceLeave, this.onDeviceLeave.bind(this));
-    this.log.info(`Registered extension '${this.constructor.name}'`);
+export class ExtensionOnEvent extends Extension {
+  public async start(): Promise<void> {
+    this.registerEventHandler(Events.started, this.onStarted.bind(this));
+    this.registerEventHandler(Events.stop, this.onStop.bind(this));
+    this.registerEventHandler(Events.message, this.onMessage.bind(this));
+    this.registerEventHandler(Events.adapterDisconnected, this.onAdapterDisconnected.bind(this));
+    this.registerEventHandler(Events.deviceJoined, this.onDeviceJoined.bind(this));
+    this.registerEventHandler(Events.deviceInterview, this.onDeviceInterview.bind(this));
+    this.registerEventHandler(Events.deviceAnnounce, this.onDeviceAnnounce.bind(this));
+    this.registerEventHandler(Events.deviceLeave, this.onDeviceLeave.bind(this));
   }
 
   private onStarted() {
