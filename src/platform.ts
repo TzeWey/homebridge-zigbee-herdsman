@@ -12,7 +12,7 @@ import {
 import * as path from 'path';
 import retry from 'async-retry';
 
-import { Zigbee, Events } from './zigbee';
+import { Zigbee } from './zigbee';
 
 interface PluginPlatformConfig extends PlatformConfig {
   port?: string;
