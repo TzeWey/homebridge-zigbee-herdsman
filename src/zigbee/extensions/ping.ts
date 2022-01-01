@@ -1,9 +1,9 @@
-import { ZigbeeHerdsmanPlatform } from '../../platform';
+import { PluginPlatform } from '../../platform';
 import { MessagePayload } from 'zigbee-herdsman/dist/controller/events';
 import * as zigbeeHerdsmanConverters from 'zigbee-herdsman-converters';
 
 import { Zigbee } from '../zigbee';
-import { ZigbeeDefinition, ZigbeeEntity, Events, Device } from '../types';
+import { Definition, ZigbeeEntity, Events, Device } from '..';
 
 export class ZigbeePing {
   // Pingable end devices, some end devices should be pinged
@@ -19,7 +19,7 @@ export class ZigbeePing {
   private readonly states = new Map<string, boolean>();
   private pollInterval = 60 * 60 * 1000;
 
-  constructor(private readonly platform: ZigbeeHerdsmanPlatform, private readonly zigbee: Zigbee) {
+  constructor(private readonly platform: PluginPlatform, private readonly zigbee: Zigbee) {
     this.zigbee.on(Events.started, this.onStarted.bind(this));
     this.zigbee.on(Events.stop, this.onStop.bind(this));
     this.zigbee.on(Events.message, this.onMessage.bind(this));
@@ -41,7 +41,7 @@ export class ZigbeePing {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onMessage(data: MessagePayload, resolvedEntity: ZigbeeEntity) {
+  onMessage(data: MessagePayload, entity: ZigbeeEntity) {
     const device = data.device;
     if (!device) {
       return;
@@ -56,17 +56,17 @@ export class ZigbeePing {
 
   async handleIntervalPingable(device: Device) {
     // When a device is already unavailable, log the ping failed on 'debug' instead of 'error'.
-    const resolvedEntity = this.zigbee.resolveEntity(device);
-    if (!resolvedEntity) {
+    const entity = this.zigbee.resolveEntity(device);
+    if (!entity) {
       this.log.debug(`Stop pinging '${device.ieeeAddr}', device is not known anymore`);
       return;
     }
 
     try {
       await device.ping();
-      this.log.debug(`Successfully pinged '${resolvedEntity.name}'`);
+      this.log.debug(`Successfully pinged '${entity.name}'`);
     } catch (error) {
-      this.log.error(`Failed to ping '${resolvedEntity.name}'`);
+      this.log.error(`Failed to ping '${entity.name}'`);
     } finally {
       this.setTimerPingable(device);
     }
@@ -80,7 +80,7 @@ export class ZigbeePing {
   }
 
   private isPingable(device: Device) {
-    if (this.PINGABLE_END_DEVICES.find((d: ZigbeeDefinition) => d && d.zigbeeModel.includes(device.modelID))) {
+    if (this.PINGABLE_END_DEVICES.find((d: Definition) => d && d.zigbeeModel.includes(device.modelID))) {
       return true;
     }
 

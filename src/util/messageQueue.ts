@@ -67,8 +67,8 @@ export class MessageQueue<KEY, RESPONSE> {
   enqueue(key: KEY, timeout = NaN): KEY {
     const messageTimeout = isNaN(timeout) ? this.defaultTimeout : timeout;
     const responsePromise = new DeferredPromise<RESPONSE>();
-    const timeoutPromise = new Promise<RESPONSE>((resolve, reject) => {
-      setTimeout(() => reject(new Error('message response timeout')), messageTimeout);
+    const timeoutPromise = new Promise<RESPONSE>((_, reject) => {
+      setTimeout(() => reject(new Error(`message response timeout for '${key}'`)), messageTimeout);
     });
     this.queue.set(key, { timeoutPromise, responsePromise });
     return key;
@@ -109,7 +109,7 @@ export class MessageQueue<KEY, RESPONSE> {
     try {
       return await Promise.all(waitPromises);
     } catch (e) {
-      if (types.isNativeError(e)){
+      if (types.isNativeError(e)) {
         this.log.debug('messageQueue:', e.message);
       }
       return [];

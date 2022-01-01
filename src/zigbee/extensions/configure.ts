@@ -3,8 +3,9 @@ import { DeviceJoinedPayload } from 'zigbee-herdsman/dist/controller/events';
 import { getConfigureKey } from 'zigbee-herdsman-converters';
 
 import { Zigbee } from '../zigbee';
-import { ZigbeeEntity, Endpoint, Events } from '../types';
-import { ZigbeeHerdsmanPlatform } from '../../platform';
+import { Events, Endpoint, ZigbeeEntity, ZigbeeDevice } from '../types';
+import { PluginPlatform } from '../../platform';
+import { objectHasProperty } from '../../util/utils';
 
 export class ZigbeeConfigure {
   private log = this.platform.log;
@@ -12,82 +13,91 @@ export class ZigbeeConfigure {
   private readonly attempts = new Map<string, number>();
   private coordinatorEndpoint!: Endpoint;
 
-  constructor(private readonly platform: ZigbeeHerdsmanPlatform, private readonly zigbee: Zigbee) {
+  constructor(private readonly platform: PluginPlatform, private readonly zigbee: Zigbee) {
     this.zigbee.on(Events.started, this.onStarted.bind(this));
     this.zigbee.on(Events.deviceJoined, this.onDeviceJoined.bind(this));
     this.zigbee.on(Events.message, this.onMessage.bind(this));
     this.log.info(`Registered extension '${this.constructor.name}'`);
   }
 
-  async onStarted() {
-    this.coordinatorEndpoint = this.zigbee.getDevicesByType('Coordinator')[0].getEndpoint(1);
+  private async onStarted() {
+    this.coordinatorEndpoint = this.zigbee.firstCoordinatorEndpoint();
 
     for (const device of this.zigbee.getClients()) {
-      const resolvedEntity = this.zigbee.resolveEntity(device);
-      if (this.shouldConfigure(resolvedEntity, Events.started)) {
-        await this.configure(resolvedEntity);
+      const entity = this.zigbee.resolveEntity(device);
+
+      if (!entity || !(entity instanceof ZigbeeDevice)) {
+        return false;
+      }
+
+      if (this.shouldConfigure(entity, Events.started)) {
+        await this.configure(entity);
       }
     }
   }
 
-  onDeviceJoined(data: DeviceJoinedPayload, resolvedEntity: ZigbeeEntity) {
+  private async onDeviceJoined(data: DeviceJoinedPayload, entity: ZigbeeEntity) {
     const device = data.device;
-    const meta = (<any>device).meta; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const meta = device.meta;
 
-    if (Object.prototype.hasOwnProperty.call(meta, 'configured')) {
+    if (objectHasProperty(meta, 'configured')) {
       delete meta.configured;
       data.device.save();
     }
 
-    if (this.shouldConfigure(resolvedEntity, Events.deviceJoined)) {
-      this.configure(resolvedEntity);
+    if (!entity || !(entity instanceof ZigbeeDevice)) {
+      return false;
+    }
+
+    if (this.shouldConfigure(entity, Events.deviceJoined)) {
+      await this.configure(entity);
     }
   }
 
-  onMessage(_, resolvedEntity: ZigbeeEntity) {
-    if (this.shouldConfigure(resolvedEntity, Events.message)) {
-      this.configure(resolvedEntity);
+  private async onMessage(_, entity: ZigbeeEntity) {
+    if (!entity || !(entity instanceof ZigbeeDevice)) {
+      return false;
+    }
+
+    if (this.shouldConfigure(entity, Events.message)) {
+      await this.configure(entity);
     }
   }
 
-  shouldConfigure(resolvedEntity: ZigbeeEntity, event: Events) {
-    if (!resolvedEntity || !resolvedEntity.definition || !resolvedEntity.definition.configure) {
+  private shouldConfigure(entity: ZigbeeDevice, event: Events) {
+    if (!entity || !entity.definition || !entity.definition.configure) {
       return false;
     }
 
-    if (!resolvedEntity.device) {
+    const meta = entity.zh.meta;
+    if (meta && objectHasProperty(meta, 'configured') && meta.configured === getConfigureKey(entity.definition)) {
       return false;
     }
 
-    const meta = (<any>resolvedEntity.device).meta; // eslint-disable-line @typescript-eslint/no-explicit-any
-    if (
-      meta &&
-      Object.prototype.hasOwnProperty.call(meta, 'configured') &&
-      meta.configured === getConfigureKey(resolvedEntity.definition)
-    ) {
-      return false;
-    }
-
-    if (resolvedEntity.device.interviewing === true) {
+    if (entity.zh.interviewing === true) {
       return false;
     }
 
     // Only configure end devices when a message is received, otherwise it will likely fails as they are sleeping.
-    if (resolvedEntity.device.type === 'EndDevice' && event !== Events.message) {
+    if (entity.zh.type === 'EndDevice' && event !== Events.message) {
       return false;
     }
 
     return true;
   }
 
-  async configure(resolvedEntity: ZigbeeEntity, force = false, throwError = false) {
-    const device = resolvedEntity.device;
-    if (!device) {
+  private async configure(entity: ZigbeeDevice) {
+    const entityName = entity.name;
+    const entityDescription = entity.definition?.description;
+    const device = entity.zh;
+    const ieeeAddr = device.ieeeAddr;
+
+    // Check to satisfy compiler warning, 'configure' is already verified by 'shouldConfigure'
+    if (!entity.definition?.configure) {
       return false;
     }
 
-    const ieeeAddr = device.ieeeAddr;
-    if (this.configuring.has(ieeeAddr) || (this.attempts[ieeeAddr] >= 3 && !force)) {
+    if (this.configuring.has(ieeeAddr) || this.attempts[ieeeAddr] >= 3) {
       return false;
     }
 
@@ -97,38 +107,19 @@ export class ZigbeeConfigure {
       this.attempts[ieeeAddr] = 0;
     }
 
-    const entityName = resolvedEntity.name;
-    if (!resolvedEntity.definition) {
-      this.log.error(`Failed to configure '${entityName}', entity has no definition!`);
-      return false;
-    }
-
-    const entityDescription = resolvedEntity.definition.description;
-    if (!resolvedEntity.definition.configure) {
-      this.log.error(
-        `Failed to configure '${entityName}' [${entityDescription}], entity definition has no method 'configure'`,
-      );
-      return false;
-    }
-
     try {
       this.log.info(`Configuring '${entityName}' [${entityDescription}]`);
-      await resolvedEntity.definition.configure(device, this.coordinatorEndpoint);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (<any>device).meta.configured = getConfigureKey(resolvedEntity.definition);
+      await entity.definition.configure(device, this.coordinatorEndpoint, this.log);
+      device.meta.configured = getConfigureKey(entity.definition);
       this.log.info(`Successfully configured '${entityName}' [${entityDescription}]`);
       device.save();
     } catch (error) {
       this.attempts[ieeeAddr]++;
       const attempt = this.attempts[ieeeAddr];
 
-      if (types.isNativeError(error)){
+      if (types.isNativeError(error)) {
         const msg = `Failed to configure '${entityName}' [${entityDescription}], attempt ${attempt} (${error.stack})`;
         this.log.error(msg);
-      }
-
-      if (throwError) {
-        throw error;
       }
     }
 

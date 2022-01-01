@@ -20,8 +20,8 @@ export class ProgrammableSwitchServiceBuilder extends ServiceBuilder {
     supportedActions?: number[],
   ): ProgrammableSwitchServiceBuilder {
     this.service =
-      this.accessory.getServiceById(this.platform.Service.StatelessProgrammableSwitch, subType) ||
-      this.accessory.addService(this.platform.Service.StatelessProgrammableSwitch, displayName, subType);
+      this.platformAccessory.getServiceById(this.platform.Service.StatelessProgrammableSwitch, subType) ||
+      this.platformAccessory.addService(this.platform.Service.StatelessProgrammableSwitch, displayName, subType);
 
     this.service
       .setCharacteristic(this.platform.Characteristic.Name, displayName)
@@ -39,8 +39,8 @@ export class ProgrammableSwitchServiceBuilder extends ServiceBuilder {
   withStatefulSwitch(displayName: string, subType: string, index: number): ProgrammableSwitchServiceBuilder {
     const Characteristic = this.platform.Characteristic;
     this.service =
-      this.accessory.getServiceById(this.platform.Service.StatefulProgrammableSwitch, subType) ||
-      this.accessory.addService(this.platform.Service.StatefulProgrammableSwitch, displayName, subType);
+      this.platformAccessory.getServiceById(this.platform.Service.StatefulProgrammableSwitch, subType) ||
+      this.platformAccessory.addService(this.platform.Service.StatefulProgrammableSwitch, displayName, subType);
 
     this.service
       .setCharacteristic(Characteristic.Name, displayName)

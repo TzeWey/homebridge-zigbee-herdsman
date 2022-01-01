@@ -13,8 +13,8 @@ export class OutletServiceBuilder extends ServiceBuilder {
   constructor(protected readonly zigbeeAccessory: ZigbeeAccessory) {
     super(zigbeeAccessory);
     this.service =
-      this.accessory.getService(this.platform.Service.Outlet) ||
-      this.accessory.addService(this.platform.Service.Outlet);
+      this.platformAccessory.getService(this.platform.Service.Outlet) ||
+      this.platformAccessory.addService(this.platform.Service.Outlet);
   }
 
   public withOnOff(): OutletServiceBuilder {

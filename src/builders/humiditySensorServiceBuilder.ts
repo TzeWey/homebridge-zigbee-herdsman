@@ -7,8 +7,8 @@ export class HumiditySensorServiceBuilder extends ServiceBuilder {
   constructor(protected readonly zigbeeAccessory: ZigbeeAccessory) {
     super(zigbeeAccessory);
     this.service =
-      this.accessory.getService(this.platform.Service.HumiditySensor) ||
-      this.accessory.addService(this.platform.Service.HumiditySensor);
+      this.platformAccessory.getService(this.platform.Service.HumiditySensor) ||
+      this.platformAccessory.addService(this.platform.Service.HumiditySensor);
   }
 
   public withHumidity(): HumiditySensorServiceBuilder {

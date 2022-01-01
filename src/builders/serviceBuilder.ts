@@ -1,10 +1,10 @@
 import { Logger, Service, PlatformAccessory } from 'homebridge';
-import { ZigbeeHerdsmanPlatform } from '../platform';
+import { PluginPlatform } from '../platform';
 import { ZigbeeAccessory } from '../accessories';
 
 export abstract class ServiceBuilder {
-  protected readonly platform: ZigbeeHerdsmanPlatform = this.zigbeeAccessory.platform;
-  protected readonly accessory: PlatformAccessory = this.zigbeeAccessory.accessory;
+  protected readonly platform: PluginPlatform = this.zigbeeAccessory.platform;
+  protected readonly platformAccessory: PlatformAccessory = this.zigbeeAccessory.accessory;
   protected readonly log: Logger = this.platform.log;
   protected service!: Service;
 
@@ -78,7 +78,7 @@ export abstract class ServiceBuilder {
   }
 
   protected debugState(name, value) {
-    const displayName = `${this.zigbeeAccessory.device.ieeeAddr}:${this.zigbeeAccessory.name}`;
+    const displayName = `${this.zigbeeAccessory.ID}:${this.zigbeeAccessory.name}`;
     this.log.info(`[${displayName}] ${this.constructor.name}: ${name}:`, value);
   }
 }

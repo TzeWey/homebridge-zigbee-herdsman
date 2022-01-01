@@ -15,16 +15,17 @@ import retry from 'async-retry';
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import {
   Zigbee,
-  ZigbeeEntity,
   Events,
   MessagePayload,
-  Device,
   DeviceJoinedPayload,
   DeviceLeavePayload,
+  Device,
+  ZigbeeDevice,
+  ZigbeeEntity,
 } from './zigbee';
 import { ZigbeeAccessory, ZigbeeAccessoryResolver } from './accessories';
 
-interface ZigbeeHerdsmanPlatformConfig extends PlatformConfig {
+interface PluginPlatformConfig extends PlatformConfig {
   port?: string;
   panID?: number;
   channel?: number;
@@ -37,7 +38,7 @@ interface ZigbeeHerdsmanPlatformConfig extends PlatformConfig {
  * This class is the main constructor for your plugin, this is where you should
  * parse the user config and discover/register accessories with Homebridge.
  */
-export class ZigbeeHerdsmanPlatform implements DynamicPlatformPlugin {
+export class PluginPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service = this.api.hap.Service;
   public readonly Characteristic: typeof Characteristic = this.api.hap.Characteristic;
 
@@ -48,11 +49,7 @@ export class ZigbeeHerdsmanPlatform implements DynamicPlatformPlugin {
   public readonly zigbee: Zigbee;
   public readonly zigbeeAccessoryResolver: ZigbeeAccessoryResolver;
 
-  constructor(
-    public readonly log: Logger,
-    public readonly config: ZigbeeHerdsmanPlatformConfig,
-    public readonly api: API,
-  ) {
+  constructor(public readonly log: Logger, public readonly config: PluginPlatformConfig, public readonly api: API) {
     const databasePath = path.join(this.api.user.storagePath(), 'database.db');
     const coordinatorBackupPath = path.join(this.api.user.storagePath(), 'coordinator.json');
     this.zigbee = new Zigbee(this, {
@@ -93,16 +90,16 @@ export class ZigbeeHerdsmanPlatform implements DynamicPlatformPlugin {
     this.accessories.set(accessory.UUID, accessory);
   }
 
-  public getZigbeeAccessory(resolvedEntity: ZigbeeEntity): ZigbeeAccessory | null {
-    const device = resolvedEntity.device;
-    if (!device) {
+  public getZigbeeAccessory(entity: ZigbeeEntity): ZigbeeAccessory | null {
+    if (!(entity instanceof ZigbeeDevice)) {
       return null;
     }
 
-    const uuid = this.api.hap.uuid.generate(device.ieeeAddr);
+    const uuid = this.api.hap.uuid.generate(entity.ieeeAddr);
     const zigbeeAccessory = this.zigbeeAccessories.get(uuid);
+
     if (!zigbeeAccessory) {
-      this.log.debug(`could not find accessory ${uuid} [${device.ieeeAddr}]`);
+      this.log.debug(`Could not find accessory '${uuid}' [${entity.ieeeAddr}]`);
       return null;
     }
 
@@ -158,7 +155,7 @@ export class ZigbeeHerdsmanPlatform implements DynamicPlatformPlugin {
     removed.forEach((uuid) => this.accessories.delete(uuid));
   }
 
-  private async configureDevice(device: Device, resolvedEntity: ZigbeeEntity) {
+  private async configureDevice(device: Device, entity: ZigbeeEntity) {
     // Do not associate Coordinators with accessories
     if (device.type === 'Coordinator') {
       return;
@@ -167,8 +164,8 @@ export class ZigbeeHerdsmanPlatform implements DynamicPlatformPlugin {
     const uuid = this.api.hap.uuid.generate(device.ieeeAddr);
     this.log.info(`Initializing device ${device.ieeeAddr} [${uuid}]`);
 
-    const ZigbeeAccessory = this.zigbeeAccessoryResolver.getAccessoryClass(device);
-    if (!ZigbeeAccessory) {
+    const ZigbeeAccessoryFactory = this.zigbeeAccessoryResolver.getFactory(device);
+    if (!ZigbeeAccessoryFactory) {
       this.log.warn('Unrecognized device: ', device);
       return;
     }
@@ -176,16 +173,16 @@ export class ZigbeeHerdsmanPlatform implements DynamicPlatformPlugin {
     const existingAccessory = this.accessories.get(uuid);
     if (existingAccessory) {
       // Update accessory cache with any changes to the accessory details and information
-      const zigbeeAccessory = new ZigbeeAccessory(this, existingAccessory, device);
+      const zigbeeAccessory = new ZigbeeAccessoryFactory(this, existingAccessory, device);
       this.zigbeeAccessories.set(uuid, zigbeeAccessory);
       this.log.info('> Restoring existing accessory from cache: ', zigbeeAccessory.vendor, zigbeeAccessory.description);
       this.api.updatePlatformAccessories([existingAccessory]);
     } else {
       // Create a new accessory and link the accessory to the platform
-      const zigbeeEntity = resolvedEntity || this.zigbee.resolveEntity(device);
-      const displayName = zigbeeEntity?.definition?.description || device.modelID || device.ieeeAddr;
+      const newEntity = entity || this.zigbee.resolveEntity(device);
+      const displayName = newEntity?.definition?.description || device.modelID || device.ieeeAddr;
       const newAccessory = new this.api.platformAccessory(displayName, uuid);
-      const zigbeeAccessory = new ZigbeeAccessory(this, newAccessory, device);
+      const zigbeeAccessory = new ZigbeeAccessoryFactory(this, newAccessory, device);
       this.zigbeeAccessories.set(uuid, zigbeeAccessory);
       this.log.info('> Registering new accessory: ', zigbeeAccessory.vendor, zigbeeAccessory.description);
       this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newAccessory]);
@@ -197,8 +194,10 @@ export class ZigbeeHerdsmanPlatform implements DynamicPlatformPlugin {
     this.cleanupDevices();
 
     for (const device of this.zigbee.getClients()) {
-      const resolvedEntity = this.zigbee.resolveEntity(device);
-      this.configureDevice(device, resolvedEntity);
+      const entity = this.zigbee.resolveEntity(device);
+      if (entity && entity instanceof ZigbeeDevice) {
+        this.configureDevice(device, entity);
+      }
     }
   }
 
@@ -207,8 +206,8 @@ export class ZigbeeHerdsmanPlatform implements DynamicPlatformPlugin {
     await this.stop();
   }
 
-  private async onZigbeeDeviceJoined(data: DeviceJoinedPayload, resolvedEntity: ZigbeeEntity) {
-    this.configureDevice(data.device, resolvedEntity);
+  private async onZigbeeDeviceJoined(data: DeviceJoinedPayload, entity: ZigbeeEntity) {
+    this.configureDevice(data.device, entity);
   }
 
   private async onZigbeeDeviceLeave(data: DeviceLeavePayload) {
@@ -222,8 +221,11 @@ export class ZigbeeHerdsmanPlatform implements DynamicPlatformPlugin {
     }
   }
 
-  private async onZigbeeMessage(data: MessagePayload, resolvedEntity: ZigbeeEntity) {
-    const zigbeeAccessory = this.getZigbeeAccessory(resolvedEntity);
+  private async onZigbeeMessage(data: MessagePayload, entity: ZigbeeEntity) {
+    const zigbeeAccessory = this.getZigbeeAccessory(entity);
+    if (zigbeeAccessory === null) {
+      this.log.debug(`> ZigbeeAccessory instance for '${entity.ID}' not found`);
+    }
     await zigbeeAccessory?.processMessage(data);
   }
 }

@@ -1,7 +1,7 @@
 import { Logger, PlatformAccessory } from 'homebridge';
 import { findByDevice } from 'zigbee-herdsman-converters';
 
-import { ZigbeeHerdsmanPlatform } from '../platform';
+import { PluginPlatform } from '../platform';
 import { Device } from '../zigbee';
 import { ZigbeeAccessory } from './zigbeeAccessory';
 
@@ -11,62 +11,62 @@ import { TerncySmartLightSocket } from './terncy';
 import { TuyaOnOffTripleSwitch } from './tuya';
 import { XiaomiMotionLightSensor, XiaomiTemperatureHumidityPressureSensor } from './xiaomi';
 
-export interface ZigbeeAccessoryCtor {
-  new (platform: ZigbeeHerdsmanPlatform, accessory: PlatformAccessory, device: Device): ZigbeeAccessory;
+export interface ZigbeeAccessoryFactory {
+  new (platform: PluginPlatform, accessory: PlatformAccessory, device: Device): ZigbeeAccessory;
 }
 
 export class ZigbeeAccessoryResolver {
   private readonly log: Logger = this.platform.log;
-  private readonly registry: Map<string, ZigbeeAccessoryCtor> = new Map();
+  private readonly registry: Map<string, ZigbeeAccessoryFactory> = new Map();
 
-  constructor(private readonly platform: ZigbeeHerdsmanPlatform) {
+  constructor(private readonly platform: PluginPlatform) {
     let vendor: string;
 
     /*
      * IKEA
      */
     vendor = 'IKEA';
-    this.registerResolver(vendor, ['E1603/E1702/E1708'], GenericOutlet);
-    this.registerResolver(vendor, ['E1525/E1745'], IkeaMotionSensor);
-    this.registerResolver(vendor, ['E1743'], IkeaOnOffSwitch);
-    this.registerResolver(vendor, ['LED1624G9'], IkeaTradfriDimColor);
+    this.registerFactory(vendor, ['E1603/E1702/E1708'], GenericOutlet);
+    this.registerFactory(vendor, ['E1525/E1745'], IkeaMotionSensor);
+    this.registerFactory(vendor, ['E1743'], IkeaOnOffSwitch);
+    this.registerFactory(vendor, ['LED1624G9'], IkeaTradfriDimColor);
 
     /*
      * SONOFF
      */
     vendor = 'SONOFF';
-    this.registerResolver(vendor, ['ZBMINI'], GenericOutlet);
+    this.registerFactory(vendor, ['ZBMINI'], GenericOutlet);
 
     /*
      * TERNCY
      */
     vendor = 'TERNCY';
-    this.registerResolver(vendor, ['TERNCY-LS01'], TerncySmartLightSocket);
+    this.registerFactory(vendor, ['TERNCY-LS01'], TerncySmartLightSocket);
 
     /*
      * TuYa
      */
     vendor = 'TuYa';
-    this.registerResolver(vendor, ['TS0043'], TuyaOnOffTripleSwitch);
-    this.registerResolver(vendor, ['TS011F_socket_module'], GenericOutlet);
+    this.registerFactory(vendor, ['TS0043'], TuyaOnOffTripleSwitch);
+    this.registerFactory(vendor, ['TS011F_socket_module'], GenericOutlet);
 
     /*
      * Xiaomi
      */
     vendor = 'Xiaomi';
-    this.registerResolver(vendor, ['RTCGQ11LM'], XiaomiMotionLightSensor);
-    this.registerResolver(vendor, ['WSDCGQ11LM'], XiaomiTemperatureHumidityPressureSensor);
+    this.registerFactory(vendor, ['RTCGQ11LM'], XiaomiMotionLightSensor);
+    this.registerFactory(vendor, ['WSDCGQ11LM'], XiaomiTemperatureHumidityPressureSensor);
   }
 
   private getKey(vendor: string, model: string) {
     return `${vendor}:${model}`;
   }
 
-  private registerResolver(vendor: string, models: string[], ctor: ZigbeeAccessoryCtor) {
-    models.forEach((model) => this.registry.set(this.getKey(vendor, model), ctor));
+  private registerFactory(vendor: string, models: string[], factory: ZigbeeAccessoryFactory) {
+    models.forEach((model) => this.registry.set(this.getKey(vendor, model), factory));
   }
 
-  public getAccessoryClass(device: Device): ZigbeeAccessoryCtor | undefined {
+  public getFactory(device: Device): ZigbeeAccessoryFactory | undefined {
     const definition = findByDevice(device);
     if (!definition) {
       this.log.warn(
@@ -76,15 +76,15 @@ export class ZigbeeAccessoryResolver {
     }
 
     const key = this.getKey(definition.vendor, definition.model);
-    const ctor = this.registry.get(key);
+    const factory = this.registry.get(key);
 
-    if (!ctor) {
+    if (!factory) {
       this.log.warn(
-        `Unable to resolve accessory class for '${device.ieeeAddr}' [${definition.vendor}:${definition.model}] `,
+        `Unable to resolve accessory factory for '${device.ieeeAddr}' [${definition.vendor}:${definition.model}] `,
       );
       return undefined;
     }
 
-    return ctor;
+    return factory;
   }
 }

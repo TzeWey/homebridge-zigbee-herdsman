@@ -1,33 +1,29 @@
 import humanizeDuration from 'humanize-duration';
 
-// Xiaomi uses 4151 and 4447 (lumi.plug) as manufacturer ID.
-const xiaomiManufacturerID = [4151, 4447];
-const ikeaTradfriManufacturerID = [4476];
-
 // construct a local ISO8601 string (instead of UTC-based)
 // Example:
 //  - ISO8601 (UTC) = 2019-03-01T15:32:45.941+0000
 //  - ISO8601 (local) = 2019-03-01T16:32:45.941+0100 (for timezone GMT+1)
-function toLocalISOString(dDate) {
-  const tzOffset = -dDate.getTimezoneOffset();
+function toLocalISOString(date: Date): string {
+  const tzOffset = -date.getTimezoneOffset();
   const plusOrMinus = tzOffset >= 0 ? '+' : '-';
-  const pad = function (num) {
+  const pad = (num: number): string => {
     const norm = Math.floor(Math.abs(num));
     return (norm < 10 ? '0' : '') + norm;
   };
 
   return (
-    dDate.getFullYear() +
+    date.getFullYear() +
     '-' +
-    pad(dDate.getMonth() + 1) +
+    pad(date.getMonth() + 1) +
     '-' +
-    pad(dDate.getDate()) +
+    pad(date.getDate()) +
     'T' +
-    pad(dDate.getHours()) +
+    pad(date.getHours()) +
     ':' +
-    pad(dDate.getMinutes()) +
+    pad(date.getMinutes()) +
     ':' +
-    pad(dDate.getSeconds()) +
+    pad(date.getSeconds()) +
     plusOrMinus +
     pad(tzOffset / 60) +
     ':' +
@@ -35,35 +31,20 @@ function toLocalISOString(dDate) {
   );
 }
 
-function capitalize(s) {
-  return s[0].toUpperCase() + s.slice(1);
-}
-
-function formatDate(date, type) {
-  let result;
-
-  switch (type) {
-    case 'ISO_8601':
-      result = new Date(date).toISOString();
-      break;
-    case 'ISO_8601_local':
-      result = toLocalISOString(new Date(date));
-      break;
-    case 'epoch':
-      result = date;
-      break;
-    case 'relative':
-      // https://github.com/EvanHahn/HumanizeDuration.js#options
-      result = humanizeDuration(Date.now() - date, { language: 'en', largest: 2, round: true }) + ' ago';
-      break;
-    default:
-      throw new Error(`Unsupported type '${type}'`);
+export function formatDate(time: number, type: 'ISO_8601' | 'ISO_8601_local' | 'epoch' | 'relative'): string | number {
+  if (type === 'ISO_8601') {
+    return new Date(time).toISOString();
+  } else if (type === 'ISO_8601_local') {
+    return toLocalISOString(new Date(time));
+  } else if (type === 'epoch') {
+    return time;
+  } else {
+    // relative
+    return humanizeDuration(Date.now() - time, { language: 'en', largest: 2, round: true }) + ' ago';
   }
-
-  return result;
 }
 
-const endpointNames = [
+export const getEndpointNames = () => [
   'left',
   'right',
   'center',
@@ -87,6 +68,7 @@ const endpointNames = [
   'row_3',
   'row_4',
   'relay',
+  'usb',
   'l1',
   'l2',
   'l3',
@@ -95,6 +77,14 @@ const endpointNames = [
   'l6',
   'l7',
   'l8',
+  'l9',
+  'l10',
+  'l11',
+  'l12',
+  'l13',
+  'l14',
+  'l15',
+  'l16',
   'button_1',
   'button_2',
   'button_3',
@@ -119,49 +109,26 @@ const endpointNames = [
   'button_fan_high',
   'button_fan_med',
   'button_fan_low',
+  'heat',
+  'cool',
+  'water',
+  'meter',
+  'wifi',
 ];
 
-function objectHasProperties(object, properties) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function objectHasProperty(object: any, property: string): boolean {
+  return Object.prototype.hasOwnProperty.call(object, property);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function objectHasProperties(object: any, properties: string[]): boolean {
   for (const property of properties) {
-    if (!Object.prototype.hasOwnProperty.call(object, property)) {
+    if (!objectHasProperty(object, property)) {
       return false;
     }
   }
   return true;
 }
 
-function isXiaomiDevice(device) {
-  return (
-    device.modelID !== 'lumi.router' &&
-    xiaomiManufacturerID.includes(device.manufacturerID) &&
-    (!device.manufacturerName || !device.manufacturerName.startsWith('Trust'))
-  );
-}
-
-function isIkeaTradfriDevice(device) {
-  return ikeaTradfriManufacturerID.includes(device.manufacturerID);
-}
-
-function removeItemOnce(arr, value) {
-  const index = arr.indexOf(value);
-  if (index > -1) {
-    arr.splice(index, 1);
-  }
-  return arr;
-}
-
-const millisecondsToSeconds = (milliseconds: number) => milliseconds / 1000;
-const secondsToMilliseconds = (seconds: number) => seconds * 1000;
-const getEndpointNames = () => endpointNames;
-
-export {
-  millisecondsToSeconds,
-  secondsToMilliseconds,
-  objectHasProperties,
-  getEndpointNames,
-  isXiaomiDevice,
-  isIkeaTradfriDevice,
-  formatDate,
-  capitalize,
-  removeItemOnce,
-};
+export const secondsToMilliseconds = (seconds: number) => seconds * 1000;
