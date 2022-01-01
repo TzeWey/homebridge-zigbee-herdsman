@@ -64,26 +64,20 @@ export class MessageQueue<KEY, RESPONSE> {
     return this.queue.size;
   }
 
-  enqueue(key: KEY, timeout = NaN): KEY {
-    const messageTimeout = isNaN(timeout) ? this.defaultTimeout : timeout;
+  enqueue(key: KEY, timeout?: number): KEY {
     const responsePromise = new DeferredPromise<RESPONSE>();
-    const timeoutPromise = new Promise<RESPONSE>((_, reject) => {
-      setTimeout(() => reject(new Error(`message response timeout for '${key}'`)), messageTimeout);
-    });
+    const messageTimeout = timeout ? timeout : this.defaultTimeout;
+    const timeoutPromise = new Promise<RESPONSE>((_, reject) =>
+      setTimeout(() => {
+        reject(new Error(`message response timeout for '${key}'`));
+      }, messageTimeout),
+    );
     this.queue.set(key, { timeoutPromise, responsePromise });
     return key;
   }
 
-  dequeue(key: KEY): MessageQueueState<RESPONSE> | undefined {
-    const state = this.queue.get(key);
-    if (state) {
-      this.queue.delete(key);
-    }
-    return state;
-  }
-
   processMessage(key: KEY, response: RESPONSE) {
-    const state = this.dequeue(key);
+    const state = this.queue.get(key);
     if (!state) {
       this.log.debug(`messageQueue: message '${key}' not found`);
       return false;
@@ -96,17 +90,18 @@ export class MessageQueue<KEY, RESPONSE> {
     assert(keys && keys.length > 0);
     const states = keys.map((key) => {
       const state = this.queue.get(key);
-      if (!state) {
+      if (state) {
+        this.queue.delete(key);
+      } else {
         throw new Error(`state with key '${key}' could not be found`);
       }
       return state;
     });
 
-    const waitPromises = states.map((state) => {
-      return Promise.race([state.timeoutPromise, state.responsePromise]);
-    });
-
     try {
+      const waitPromises = states.map((state) => {
+        return Promise.race([state.timeoutPromise, state.responsePromise]);
+      });
       return await Promise.all(waitPromises);
     } catch (e) {
       if (types.isNativeError(e)) {
