@@ -1,11 +1,11 @@
-import { PluginPlatform } from '../../platform';
 import { MessagePayload } from 'zigbee-herdsman/dist/controller/events';
 import { tradfri } from 'zigbee-herdsman-converters/lib/ota';
 
-import { Zigbee, ZigbeeEntity, Events, ZigbeeDevice } from '..';
+import { ZigbeeEntity, Events, ZigbeeDevice } from '..';
 
-export class ZigbeeOtaUpdate {
-  private log = this.platform.log;
+import { Extension } from './extension';
+
+export class ExtensionOtaUpdate extends Extension {
   private inProgress = new Set();
   private lastChecked: Map<string, Date> = new Map();
 
@@ -13,13 +13,12 @@ export class ZigbeeOtaUpdate {
   private ota_disable_automatic_update_check = false;
   private ota_update_check_interval = 1440; // 1 day
 
-  constructor(private readonly platform: PluginPlatform, private readonly zigbee: Zigbee) {
-    this.zigbee.on(Events.message, this.onMessage.bind(this));
-    this.log.info(`Registered extension '${this.constructor.name}'`);
+  public async start(): Promise<void> {
+    this.registerEventHandler(Events.message, this.onMessage.bind(this));
 
     if (this.ota_ikea_ota_use_test_url) {
       tradfri.useTestURL();
-      this.log.info('Using IKEA test URL');
+      this.log.info('OtaUpdate: using IKEA test URL');
     }
   }
 
@@ -56,7 +55,7 @@ export class ZigbeeOtaUpdate {
       const available = await ota.isUpdateAvailable(data.device, this.log, data.data);
 
       if (available) {
-        this.log.info(`Update available for '${entity.name}'`);
+        this.log.info(`OtaUpdate: Update available for '${entity.name}'`);
       }
     }
 
@@ -67,7 +66,7 @@ export class ZigbeeOtaUpdate {
     if (endpoint) {
       const response = { status: ota ? 0x95 : 0x98 };
       // Some devices send OTA requests without defining OTA cluster as input cluster.
-      this.log.info(`Responding to device '${entity.name}' OTA request with`, response);
+      this.log.info(`OtaUpdate: Responding to device '${entity.name}' OTA request with`, response);
       await endpoint.commandResponse('genOta', 'queryNextImageResponse', response);
     }
   }

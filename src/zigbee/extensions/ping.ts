@@ -1,29 +1,26 @@
-import { PluginPlatform } from '../../platform';
 import { MessagePayload } from 'zigbee-herdsman/dist/controller/events';
-import * as zigbeeHerdsmanConverters from 'zigbee-herdsman-converters';
+import * as zhc from 'zigbee-herdsman-converters';
 
-import { Zigbee } from '../zigbee';
 import { Definition, ZigbeeEntity, Events, Device } from '..';
 
-export class ZigbeePing {
+import { Extension } from './extension';
+
+export class ExtensionPing extends Extension {
   // Pingable end devices, some end devices should be pinged
   // e.g. E11-G13 https://github.com/Koenkk/zigbee2mqtt/issues/775#issuecomment-453683846
   PINGABLE_END_DEVICES = [
-    zigbeeHerdsmanConverters.devices.find((d) => d.model === 'E11-G13'),
-    zigbeeHerdsmanConverters.devices.find((d) => d.model === 'E11-N1EA'),
-    zigbeeHerdsmanConverters.devices.find((d) => d.model === '53170161'),
+    zhc.devices.find((d) => d.model === 'E11-G13'),
+    zhc.devices.find((d) => d.model === 'E11-N1EA'),
+    zhc.devices.find((d) => d.model === '53170161'),
   ];
 
-  private log = this.platform.log;
   private readonly timers = new Map<string, NodeJS.Timeout>();
-  private readonly states = new Map<string, boolean>();
   private pollInterval = 60 * 60 * 1000;
 
-  constructor(private readonly platform: PluginPlatform, private readonly zigbee: Zigbee) {
-    this.zigbee.on(Events.started, this.onStarted.bind(this));
-    this.zigbee.on(Events.stop, this.onStop.bind(this));
-    this.zigbee.on(Events.message, this.onMessage.bind(this));
-    this.log.info(`Registered extension '${this.constructor.name}'`);
+  public async start(): Promise<void> {
+    this.registerEventHandler(Events.started, this.onStarted.bind(this));
+    this.registerEventHandler(Events.stop, this.onStop.bind(this));
+    this.registerEventHandler(Events.message, this.onMessage.bind(this));
   }
 
   onStarted() {
@@ -58,15 +55,15 @@ export class ZigbeePing {
     // When a device is already unavailable, log the ping failed on 'debug' instead of 'error'.
     const entity = this.zigbee.resolveEntity(device);
     if (!entity) {
-      this.log.debug(`Stop pinging '${device.ieeeAddr}', device is not known anymore`);
+      this.log.debug(`Ping: Stop pinging '${device.ieeeAddr}', device is not known anymore`);
       return;
     }
 
     try {
       await device.ping();
-      this.log.debug(`Successfully pinged '${entity.name}'`);
+      this.log.debug(`Ping: Successfully pinged '${entity.name}'`);
     } catch (error) {
-      this.log.error(`Failed to ping '${entity.name}'`);
+      this.log.error(`Ping: Failed to ping '${entity.name}'`);
     } finally {
       this.setTimerPingable(device);
     }

@@ -20,9 +20,9 @@ import {
   ToZigbeeConverter,
   ZigbeeDevice,
 } from '../zigbee';
-import { getEndpointNames, secondsToMilliseconds, objectHasProperty, getMessageKey } from '../util/utils';
-import { peekNextTransactionSequenceNumber } from '../util/zcl';
-import { MessageQueue } from '../util/messageQueue';
+import { getEndpointNames, secondsToMilliseconds, objectHasProperty, getMessageKey } from '../utils/utils';
+import { peekNextTransactionSequenceNumber } from '../utils/zcl';
+import { MessageQueue } from '../utils/messageQueue';
 import { Events } from '.';
 
 const propertyEndpointRegex = new RegExp(`^(.*)_(${getEndpointNames().join('|')}|\\d+)$`);

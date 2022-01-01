@@ -2,32 +2,30 @@ import { types } from 'util';
 import { DeviceJoinedPayload } from 'zigbee-herdsman/dist/controller/events';
 import { getConfigureKey } from 'zigbee-herdsman-converters';
 
-import { Zigbee } from '../zigbee';
-import { Events, Endpoint, ZigbeeEntity, ZigbeeDevice } from '../types';
-import { PluginPlatform } from '../../platform';
-import { objectHasProperty } from '../../util/utils';
+import { objectHasProperty } from '../../utils/utils';
+import { Events, Endpoint, ZigbeeEntity, ZigbeeDevice } from '..';
 
-export class ZigbeeConfigure {
-  private log = this.platform.log;
+import { Extension } from './extension';
+
+export class ExtensionConfigure extends Extension {
   private readonly configuring = new Set();
   private readonly attempts = new Map<string, number>();
   private coordinatorEndpoint!: Endpoint;
 
-  constructor(private readonly platform: PluginPlatform, private readonly zigbee: Zigbee) {
-    this.zigbee.on(Events.started, this.onStarted.bind(this));
-    this.zigbee.on(Events.deviceJoined, this.onDeviceJoined.bind(this));
-    this.zigbee.on(Events.message, this.onMessage.bind(this));
-    this.log.info(`Registered extension '${this.constructor.name}'`);
+  public async start(): Promise<void> {
+    this.registerEventHandler(Events.started, this.onStarted.bind(this));
+    this.registerEventHandler(Events.deviceJoined, this.onDeviceJoined.bind(this));
+    this.registerEventHandler(Events.message, this.onMessage.bind(this));
   }
 
-  private async onStarted() {
+  private async onStarted(): Promise<void> {
     this.coordinatorEndpoint = this.zigbee.firstCoordinatorEndpoint();
 
     for (const device of this.zigbee.getClients()) {
       const entity = this.zigbee.resolveEntity(device);
 
       if (!entity || !(entity instanceof ZigbeeDevice)) {
-        return false;
+        return;
       }
 
       if (this.shouldConfigure(entity, Events.started)) {
@@ -36,7 +34,7 @@ export class ZigbeeConfigure {
     }
   }
 
-  private async onDeviceJoined(data: DeviceJoinedPayload, entity: ZigbeeEntity) {
+  private async onDeviceJoined(data: DeviceJoinedPayload, entity: ZigbeeEntity): Promise<void> {
     const device = data.device;
     const meta = device.meta;
 
@@ -46,7 +44,7 @@ export class ZigbeeConfigure {
     }
 
     if (!entity || !(entity instanceof ZigbeeDevice)) {
-      return false;
+      return;
     }
 
     if (this.shouldConfigure(entity, Events.deviceJoined)) {
@@ -108,17 +106,17 @@ export class ZigbeeConfigure {
     }
 
     try {
-      this.log.info(`Configuring '${entityName}' [${entityDescription}]`);
+      this.log.info(`Configure: Configuring '${entityName}' [${entityDescription}]`);
       await entity.definition.configure(device, this.coordinatorEndpoint, this.log);
       device.meta.configured = getConfigureKey(entity.definition);
-      this.log.info(`Successfully configured '${entityName}' [${entityDescription}]`);
+      this.log.info(`Configure: Successfully configured '${entityName}' [${entityDescription}]`);
       device.save();
     } catch (error) {
       this.attempts[ieeeAddr]++;
       const attempt = this.attempts[ieeeAddr];
 
       if (types.isNativeError(error)) {
-        const msg = `Failed to configure '${entityName}' [${entityDescription}], attempt ${attempt} (${error.stack})`;
+        const msg = `Configure: Failed to configure '${entityName}' [${entityDescription}], attempt ${attempt} (${error.stack})`;
         this.log.error(msg);
       }
     }

@@ -1,7 +1,5 @@
 import { EventEmitter } from 'events';
 import { Controller } from 'zigbee-herdsman';
-import stringify from 'json-stable-stringify-without-jsonify';
-import { findByDevice } from 'zigbee-herdsman-converters';
 import {
   Events as HerdsmanEvents,
   MessagePayload,
@@ -10,26 +8,31 @@ import {
   DeviceAnnouncePayload,
   DeviceLeavePayload,
 } from 'zigbee-herdsman/dist/controller/events';
+import stringify from 'json-stable-stringify-without-jsonify';
 
 import { PluginPlatform } from '../platform';
 
 import { ZigbeeConfig, Events, ZigbeeDevice, Endpoint, Device } from './types';
 
-import { ZigbeeConfigure, ZigbeeOnEvent, ZigbeePing, ZigbeeOtaUpdate } from './extensions';
+import {
+  Extension,
+  ExtensionHomebridge,
+  ExtensionConfigure,
+  ExtensionOnEvent,
+  ExtensionPing,
+  ExtensionOtaUpdate,
+} from './extensions';
 
 export class Zigbee extends EventEmitter {
   private readonly herdsman: Controller;
   private readonly log = this.platform.log;
-
-  private readonly zigbeeConfigure: ZigbeeConfigure;
-  private readonly zigbeeOnEvent: ZigbeeOnEvent;
-  private readonly zigbeePing: ZigbeePing;
-  private readonly zigbeeOtaUpdate: ZigbeeOtaUpdate;
+  private readonly extensions: Extension[];
 
   private deviceLookup: { [s: string]: ZigbeeDevice } = {};
 
   constructor(private readonly platform: PluginPlatform, private readonly config: ZigbeeConfig) {
     super();
+
     this.herdsman = new Controller({
       network: {
         panID: this.config.panID,
@@ -53,14 +56,19 @@ export class Zigbee extends EventEmitter {
       acceptJoiningDeviceHandler: (ieeeAddr) => this.acceptJoiningDeviceHandler(ieeeAddr),
     });
 
-    // Initialize extensions
-    this.zigbeeConfigure = new ZigbeeConfigure(platform, this);
-    this.zigbeeOnEvent = new ZigbeeOnEvent(platform, this);
-    this.zigbeePing = new ZigbeePing(platform, this);
-    this.zigbeeOtaUpdate = new ZigbeeOtaUpdate(platform, this);
+    this.extensions = [
+      new ExtensionHomebridge(platform, this),
+      new ExtensionConfigure(platform, this),
+      new ExtensionOnEvent(platform, this),
+      new ExtensionPing(platform, this),
+      new ExtensionOtaUpdate(platform, this),
+    ];
   }
 
-  async start() {
+  public async start() {
+    this.log.info('Starting Zigbee extensions...');
+    await this.startExtensions();
+
     this.log.info('Starting zigbee-herdsman...');
 
     try {
@@ -71,7 +79,7 @@ export class Zigbee extends EventEmitter {
     }
 
     this.log.info(`Coordinator firmware version: '${stringify(await this.getCoordinatorVersion())}'`);
-    this.log.debug(`Zigbee network parameters: ${stringify(await this.getNetworkParameters())}`);
+    this.log.info(`Zigbee network parameters: ${stringify(await this.getNetworkParameters())}`);
 
     this.herdsman.on(HerdsmanEvents.adapterDisconnected, () => this.emit(Events.adapterDisconnected));
     this.herdsman.on(HerdsmanEvents.deviceAnnounce, this.onZigbeeDeviceAnnounce.bind(this));
@@ -79,7 +87,7 @@ export class Zigbee extends EventEmitter {
     this.herdsman.on(HerdsmanEvents.deviceJoined, this.onZigbeeDeviceJoined.bind(this));
     this.herdsman.on(HerdsmanEvents.deviceLeave, this.onZigbeeDeviceLeave.bind(this));
     this.herdsman.on(HerdsmanEvents.message, this.onZigbeeMessage.bind(this));
-    this.log.debug('Registered zigbee-herdsman event handlers');
+    this.log.info('Registered zigbee-herdsman event handlers');
 
     // Check if we have to set a transmit power
     if (this.config.transmitPower) {
@@ -87,14 +95,32 @@ export class Zigbee extends EventEmitter {
       this.log.info(`Set transmit power to '${this.config.transmitPower}'`);
     }
 
-    this.log.info('zigbee-herdsman started');
+    this.log.info('Started zigbee-herdsman');
     this.emit(Events.started);
   }
 
-  async stop() {
+  public async stop() {
     this.emit(Events.stop);
     await this.herdsman.stop();
-    this.log.info('zigbee-herdsman stopped');
+    this.stopExtensions();
+    this.log.info('Stopped zigbee-herdsman');
+  }
+
+  /**
+   * Extension Routines
+   */
+  private async startExtensions() {
+    for (const extension of this.extensions) {
+      await extension.start();
+      this.log.info(`Started extension '${extension.name}'`);
+    }
+  }
+
+  private async stopExtensions() {
+    for (const extension of this.extensions) {
+      await extension.stop();
+      this.log.info(`Stopped extension '${extension.name}'`);
+    }
   }
 
   /**

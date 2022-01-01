@@ -8,7 +8,7 @@ import { types } from 'util';
 
 import { ZigbeeAccessory } from '../accessories';
 import { ServiceBuilder } from './serviceBuilder';
-import { HSBType } from '../util/hsbType';
+import { HSBType } from '../utils/hsbType';
 
 export class LightbulbServiceBuilder extends ServiceBuilder {
   constructor(protected readonly zigbeeAccessory: ZigbeeAccessory) {
