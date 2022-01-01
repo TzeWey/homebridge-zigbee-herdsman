@@ -1,4 +1,3 @@
-import { PluginPlatform } from '../../platform';
 import { MessagePayload } from 'zigbee-herdsman/dist/controller/events';
 import * as zhc from 'zigbee-herdsman-converters';
 
@@ -56,15 +55,15 @@ export class ExtensionPing extends Extension {
     // When a device is already unavailable, log the ping failed on 'debug' instead of 'error'.
     const entity = this.zigbee.resolveEntity(device);
     if (!entity) {
-      this.log.debug(`Stop pinging '${device.ieeeAddr}', device is not known anymore`);
+      this.log.debug(`Ping: Stop pinging '${device.ieeeAddr}', device is not known anymore`);
       return;
     }
 
     try {
       await device.ping();
-      this.log.debug(`Successfully pinged '${entity.name}'`);
+      this.log.debug(`Ping: Successfully pinged '${entity.name}'`);
     } catch (error) {
-      this.log.error(`Failed to ping '${entity.name}'`);
+      this.log.error(`Ping: Failed to ping '${entity.name}'`);
     } finally {
       this.setTimerPingable(device);
     }

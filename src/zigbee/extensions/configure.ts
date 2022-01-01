@@ -106,17 +106,17 @@ export class ExtensionConfigure extends Extension {
     }
 
     try {
-      this.log.info(`Configuring '${entityName}' [${entityDescription}]`);
+      this.log.info(`Configure: Configuring '${entityName}' [${entityDescription}]`);
       await entity.definition.configure(device, this.coordinatorEndpoint, this.log);
       device.meta.configured = getConfigureKey(entity.definition);
-      this.log.info(`Successfully configured '${entityName}' [${entityDescription}]`);
+      this.log.info(`Configure: Successfully configured '${entityName}' [${entityDescription}]`);
       device.save();
     } catch (error) {
       this.attempts[ieeeAddr]++;
       const attempt = this.attempts[ieeeAddr];
 
       if (types.isNativeError(error)) {
-        const msg = `Failed to configure '${entityName}' [${entityDescription}], attempt ${attempt} (${error.stack})`;
+        const msg = `Configure: Failed to configure '${entityName}' [${entityDescription}], attempt ${attempt} (${error.stack})`;
         this.log.error(msg);
       }
     }

@@ -66,7 +66,9 @@ export class Zigbee extends EventEmitter {
   }
 
   public async start() {
-    this.startExtensions();
+    this.log.info('Starting Zigbee extensions...');
+    await this.startExtensions();
+
     this.log.info('Starting zigbee-herdsman...');
 
     try {
@@ -107,18 +109,18 @@ export class Zigbee extends EventEmitter {
   /**
    * Extension Routines
    */
-  private startExtensions() {
-    this.extensions.forEach(async (extension) => {
+  private async startExtensions() {
+    for (const extension of this.extensions) {
       await extension.start();
       this.log.info(`Started extension '${extension.name}'`);
-    });
+    }
   }
 
-  private stopExtensions() {
-    this.extensions.forEach(async (extension) => {
+  private async stopExtensions() {
+    for (const extension of this.extensions) {
       await extension.stop();
       this.log.info(`Stopped extension '${extension.name}'`);
-    });
+    }
   }
 
   /**

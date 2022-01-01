@@ -5,4 +5,4 @@ export enum Events {
 }
 
 export { ZigbeeAccessory } from './zigbeeAccessory';
-export { ZigbeeAccessoryResolver } from './zigbeeAccessoryResolver';
+export { ZigbeeAccessoryResolver, ZigbeeAccessoryFactory } from './zigbeeAccessoryResolver';
