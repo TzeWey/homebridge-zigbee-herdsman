@@ -46,11 +46,13 @@ export class ProgrammableSwitchServiceBuilder extends ServiceBuilder {
     }
 
     this.zigbeeAccessory.on(Events.stateUpdate, (state: { click?: string }) => {
+      this.debugState('DEBUG Click state', state);
+
       if (!state.click) {
         return;
       }
 
-      this.debugState('click', state.click);
+      this.debugState('Click', state.click);
 
       if (!eventActionMap.has(state.click)) {
         this.log.warn(`Unhandled click event: '${state.click}'`);

@@ -27,7 +27,7 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
       .on(CharacteristicEventTypes.SET, async (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
         try {
           const state = await this.setOn(value === true);
-          this.debugState('=> On', state);
+          this.debugState('=> State', state.state);
           callback();
         } catch (e) {
           if (types.isNativeError(e)) {
@@ -51,7 +51,7 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
 
     this.zigbeeAccessory.on(Events.stateUpdate, (state: { state?: 'ON' | 'OFF' }) => {
       if (state.state !== undefined) {
-        this.debugState('On', state.state);
+        this.debugState('State', state.state);
         this.service.updateCharacteristic(Characteristic.On, state.state === 'ON');
       }
     });
@@ -229,7 +229,6 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
         try {
           const state = await this.getColorXY();
           if (state.color && state.color.x !== undefined && state.color.y !== undefined) {
-            this.debugState('Color XY', state.color);
             const hsbType = HSBType.fromXY(state.color.x, state.color.y, Y);
             this.service.updateCharacteristic(Characteristic.Hue, hsbType.hue);
             callback(null, hsbType.saturation);
