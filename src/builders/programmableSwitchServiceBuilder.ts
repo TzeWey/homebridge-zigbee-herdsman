@@ -8,7 +8,8 @@ import {
 import { ZigbeeAccessory, Events } from '../accessories';
 import { ServiceBuilder } from './serviceBuilder';
 
-export type ProgrammableSwitchClickAction = { click: string; action: number };
+export type ProgrammableSwitchEventStateTranslationCallback = (state: unknown) => string;
+export type ProgrammableSwitchEventAction = { event: string; action: number };
 
 export class ProgrammableSwitchServiceBuilder extends ServiceBuilder {
   constructor(protected readonly zigbeeAccessory: ZigbeeAccessory) {
@@ -19,7 +20,8 @@ export class ProgrammableSwitchServiceBuilder extends ServiceBuilder {
     displayName: string,
     subType: string,
     index: number,
-    actions?: ProgrammableSwitchClickAction[],
+    eventStateTranslationCallback: ProgrammableSwitchEventStateTranslationCallback,
+    eventActions?: ProgrammableSwitchEventAction[],
   ): ProgrammableSwitchServiceBuilder {
     const StatelessProgrammableSwitch = this.platform.Service.StatelessProgrammableSwitch;
     const Characteristic = this.platform.Characteristic;
@@ -34,31 +36,30 @@ export class ProgrammableSwitchServiceBuilder extends ServiceBuilder {
 
     const eventActionMap = new Map<string, number>();
 
-    if (actions && actions.length > 0) {
-      const supportedActions = actions.map((action) => action.action);
+    if (eventActions && eventActions.length > 0) {
+      const supportedActions = eventActions.map((action) => action.action);
       this.service.getCharacteristic(Characteristic.ProgrammableSwitchEvent).setProps({
         validValues: supportedActions,
       });
 
-      actions.forEach((action) => {
-        eventActionMap.set(action.click, action.action);
+      eventActions.forEach((action) => {
+        eventActionMap.set(action.event, action.action);
       });
     }
 
-    this.zigbeeAccessory.on(Events.stateUpdate, (state: { click?: string }) => {
-      this.debugState('DEBUG Click state', state);
-
-      if (!state.click) {
+    this.zigbeeAccessory.on(Events.stateUpdate, (state: unknown) => {
+      const event = eventStateTranslationCallback(state);
+      if (!event) {
         return;
       }
 
-      this.debugState('Click', state.click);
+      this.debugState('ButtonEvent', event);
 
-      if (!eventActionMap.has(state.click)) {
-        this.log.warn(`Unhandled click event: '${state.click}'`);
+      if (!eventActionMap.has(event)) {
+        this.log.warn(`Unhandled ButtonEvent: '${event}'`);
       }
 
-      const action = eventActionMap[state.click];
+      const action = eventActionMap[event];
       this.service.getCharacteristic(Characteristic.ProgrammableSwitchEvent).setValue(action);
     });
 
