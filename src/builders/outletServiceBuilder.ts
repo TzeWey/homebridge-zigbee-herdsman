@@ -37,8 +37,8 @@ export class OutletServiceBuilder extends ServiceBuilder {
       })
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         try {
-          await this.getOnOffState();
-          callback();
+          const state = await this.getOnOffState();
+          callback(null, state.state === 'ON');
         } catch (e) {
           if (types.isNativeError(e)) {
             callback(e);

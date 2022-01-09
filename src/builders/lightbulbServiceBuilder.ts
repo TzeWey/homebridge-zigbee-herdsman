@@ -3,6 +3,7 @@ import {
   CharacteristicEventTypes,
   CharacteristicGetCallback,
   CharacteristicSetCallback,
+  HAPStatus,
 } from 'homebridge';
 import { types } from 'util';
 
@@ -39,8 +40,8 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
       .getCharacteristic(Characteristic.On)
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         try {
-          await this.getOnOffState();
-          callback();
+          const state = await this.getOnOffState();
+          callback(null, state.state === 'ON');
         } catch (e) {
           if (types.isNativeError(e)) {
             callback(e);
@@ -84,8 +85,10 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
       .getCharacteristic(Characteristic.Brightness)
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         try {
-          await this.getBrightness();
-          callback();
+          const state = await this.getBrightness();
+          const brightness = state.brightness || 0;
+          const brightness_percent = brightness / 2.55;
+          callback(null, brightness_percent);
         } catch (e) {
           if (types.isNativeError(e)) {
             callback(e);
@@ -128,8 +131,9 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
       .getCharacteristic(Characteristic.ColorTemperature)
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         try {
-          await this.getColorTemperature();
-          callback();
+          const state = await this.getColorTemperature();
+          const color_temp = state.color_temp || 0;
+          callback(null, color_temp);
         } catch (e) {
           if (types.isNativeError(e)) {
             callback(e);
@@ -172,8 +176,9 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
       .getCharacteristic(Characteristic.Hue)
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         try {
-          await this.getHue();
-          callback();
+          const state = await this.getHue();
+          const hue = state.color?.hue || 0;
+          callback(null, hue);
         } catch (e) {
           if (types.isNativeError(e)) {
             callback(e);
@@ -222,8 +227,15 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
       .getCharacteristic(Characteristic.Saturation)
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         try {
-          await this.getColorXY();
-          callback();
+          const state = await this.getColorXY();
+          if (state.color && state.color.x !== undefined && state.color.y !== undefined) {
+            this.debugState('Color XY', state.color);
+            const hsbType = HSBType.fromXY(state.color.x, state.color.y, Y);
+            this.service.updateCharacteristic(Characteristic.Hue, hsbType.hue);
+            callback(null, hsbType.saturation);
+          } else {
+            callback(HAPStatus.RESOURCE_BUSY);
+          }
         } catch (e) {
           if (types.isNativeError(e)) {
             callback(e);
@@ -270,8 +282,9 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
       .getCharacteristic(Characteristic.Saturation)
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         try {
-          await this.getSaturation();
-          callback();
+          const state = await this.getSaturation();
+          const saturation = state.color?.s || 0;
+          callback(null, saturation);
         } catch (e) {
           if (types.isNativeError(e)) {
             callback(e);

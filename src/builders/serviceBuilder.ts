@@ -21,40 +21,40 @@ export abstract class ServiceBuilder {
     return this.zigbeeAccessory.setDeviceState({ state: on ? 'ON' : 'OFF' });
   }
 
-  public async getOnOffState(): Promise<void> {
-    await this.zigbeeAccessory.getDeviceState({ state: 'ON' });
+  public async getOnOffState(): Promise<{ state?: 'ON' | 'OFF' }> {
+    return this.zigbeeAccessory.getDeviceState({ state: 'ON' });
   }
 
   public async setBrightness(brightness: number) {
     return this.zigbeeAccessory.setDeviceState({ brightness });
   }
 
-  public async getBrightness(): Promise<void> {
-    await this.zigbeeAccessory.getDeviceState({ brightness: 0 });
+  public async getBrightness(): Promise<{ brightness?: number }> {
+    return this.zigbeeAccessory.getDeviceState({ brightness: 0 });
   }
 
   public async setColorTemperature(colorTemperature: number) {
     return this.zigbeeAccessory.setDeviceState({ color_temp: colorTemperature });
   }
 
-  public async getColorTemperature(): Promise<void> {
-    await this.zigbeeAccessory.getDeviceState({ color_temp: 0 });
+  public async getColorTemperature(): Promise<{ color_temp?: number }> {
+    return this.zigbeeAccessory.getDeviceState({ color_temp: 0 });
   }
 
   public async setHue(hue: number) {
     return this.zigbeeAccessory.setDeviceState({ color: { hue } });
   }
 
-  public async getHue(): Promise<void> {
-    await this.zigbeeAccessory.getDeviceState({ color: { hue: 0 } });
+  public async getHue(): Promise<{ color?: { hue?: number } }> {
+    return this.zigbeeAccessory.getDeviceState({ color: { hue: 0 } });
   }
 
   public async setColorXY(x: number, y: number) {
     return this.zigbeeAccessory.setDeviceState({ color: { x, y } });
   }
 
-  public async getColorXY(): Promise<void> {
-    await this.zigbeeAccessory.getDeviceState({ color: { x: 0, y: 0 } });
+  public async getColorXY(): Promise<{ color?: { x?: number; y?: number } }> {
+    return this.zigbeeAccessory.getDeviceState({ color: { x: 0, y: 0 } });
   }
 
   public async setColorRGB(r: number, g: number, b: number) {
@@ -65,8 +65,8 @@ export abstract class ServiceBuilder {
     return this.zigbeeAccessory.setDeviceState({ color: { s: saturation } });
   }
 
-  public async getSaturation(): Promise<void> {
-    await this.zigbeeAccessory.getDeviceState({ color: { s: 0 } });
+  public async getSaturation(): Promise<{ color?: { s?: number } }> {
+    return this.zigbeeAccessory.getDeviceState({ color: { s: 0 } });
   }
 
   protected debugState(name: string, value: unknown) {
