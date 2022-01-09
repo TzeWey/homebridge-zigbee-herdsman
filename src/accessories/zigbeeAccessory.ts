@@ -289,14 +289,14 @@ export abstract class ZigbeeAccessory extends EventEmitter {
             this.legacyRetrieveState(entity, converter, result, localTarget, key, meta);
           })
           .catch((error) => {
-            this.log.warn(`Publish '${type}' '${key}' to '${this.name}' failed:`, error);
+            this.log.warn(`Publish '${type}' '${key}' to '${this.name}' failed:\n`, error);
           });
       } else if (type === 'get' && converter.convertGet) {
         this.log.debug(`Publishing '${type}' '${key}' to '${this.name}'`);
 
         // Do not await 'convertGet' as it does not return a usable response
         converter.convertGet(localTarget, key, meta).catch((error) => {
-          this.log.warn(`Publish '${type}' '${key}' to '${this.name}' failed:`, error);
+          this.log.warn(`Publish '${type}' '${key}' to '${this.name}' failed:\n`, error);
         });
       } else {
         // No converters available for state
