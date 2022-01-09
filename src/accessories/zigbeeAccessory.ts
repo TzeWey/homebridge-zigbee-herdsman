@@ -51,7 +51,8 @@ export abstract class ZigbeeAccessory extends EventEmitter {
     assert(this.platform);
     assert(this.accessory);
 
-    this.messageQueue = new MessageQueue(this.log, secondsToMilliseconds(2));
+    // Message queue timeout shall be greater than the default zcl endpoint timeout which is 10s, so we shall use 12s here
+    this.messageQueue = new MessageQueue(this.log, secondsToMilliseconds(12));
     this.messagePublish = this.updateState.bind(this);
 
     const entity = this.zigbee.resolveEntity(device);
@@ -312,9 +313,12 @@ export abstract class ZigbeeAccessory extends EventEmitter {
         responseKeys.push(this.messageQueue.enqueue(messageKey));
 
         // Call converter routine to publish message
-        await converter.convertGet(localTarget, key, meta).catch((error) => {
+        // Do not await 'convertGet' as it does not return a usable response, we shall await the messageQueue responses instead
+        converter.convertGet(localTarget, key, meta).catch((error) => {
           const message = `Publish '${type}' '${key}' to '${this.name}' failed: '${error}'`;
           this.log.error(message);
+          // Assume message has timed-out and resolve it as an empty payload here
+          this.messageQueue.processMessage(messageKey, <MessagePayload>{});
         });
       } else {
         // No converters available for state
@@ -329,14 +333,15 @@ export abstract class ZigbeeAccessory extends EventEmitter {
     if (type === 'get' && responseKeys.length) {
       this.log.debug(`TX ${responseKeys.length} message(s) to device ${this.name}`);
       const responses = await this.messageQueue.wait(responseKeys).catch((error) => {
-        const message = `Message 'get' timeout: '${error}'`;
-        this.log.error(message);
+        this.log.error(`Message 'get' timeout: '${error}'`);
         return [];
       });
       this.log.debug(`RX ${responses.length} message(s) from device ${this.name}`);
 
       if (responses.length !== responseKeys.length) {
-        throw new Error('Did not receive all responses from device');
+        this.log.warn(
+          `Did not receive all responses from device ${this.name}, [EXP:${responseKeys.length}, GOT:${responses.length}]`,
+        );
       }
 
       responses.forEach((response) => {

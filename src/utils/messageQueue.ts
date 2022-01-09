@@ -66,11 +66,14 @@ export class MessageQueue<KEY, RESPONSE> {
 
   enqueue(key: KEY, timeout?: number): KEY {
     const responsePromise = new DeferredPromise<RESPONSE>();
-    const messageTimeout = timeout ? timeout : this.defaultTimeout;
-    const timeoutPromise = new Promise<RESPONSE>((_, reject) =>
-      setTimeout(() => {
-        reject(new Error(`message response timeout for '${key}'`));
-      }, messageTimeout),
+    const timeoutPromise = new Promise<RESPONSE>((resolve) =>
+      setTimeout(
+        () => {
+          this.log.warn(`message response timeout for '${key}'`);
+          resolve(<RESPONSE>{});
+        },
+        timeout ? timeout : this.defaultTimeout,
+      ),
     );
     this.queue.set(key, { timeoutPromise, responsePromise });
     return key;
@@ -102,10 +105,13 @@ export class MessageQueue<KEY, RESPONSE> {
       const waitPromises = states.map((state) => {
         return Promise.race([state.timeoutPromise, state.responsePromise]);
       });
-      return await Promise.all(waitPromises);
+      const responses = await Promise.all(waitPromises);
+
+      // Filter out any responses that has timed-out, they would be empty responses
+      return responses.filter((response) => Object.keys(response).length > 0);
     } catch (e) {
       if (types.isNativeError(e)) {
-        this.log.debug('messageQueue:', e.message);
+        this.log.error('messageQueue:', e.message);
       }
       return [];
     }
