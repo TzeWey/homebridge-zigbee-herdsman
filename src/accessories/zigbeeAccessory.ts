@@ -20,9 +20,8 @@ import {
   ToZigbeeConverter,
   ZigbeeDevice,
 } from '../zigbee';
-import { getEndpointNames, secondsToMilliseconds, objectHasProperty, getMessageKey } from '../utils/utils';
+import { getEndpointNames, objectHasProperty, getMessageKey } from '../utils/utils';
 import { peekNextTransactionSequenceNumber } from '../utils/zcl';
-import { MessageQueue } from '../utils/messageQueue';
 import { Events } from '.';
 
 const propertyEndpointRegex = new RegExp(`^(.*)_(${getEndpointNames().join('|')}|\\d+)$`);
@@ -36,7 +35,6 @@ export abstract class ZigbeeAccessory extends EventEmitter {
   protected readonly log: Logger = this.platform.log;
   private readonly zigbee: Zigbee = this.platform.zigbee;
   private readonly zigbeeEntity: ZigbeeEntity;
-  private readonly messageQueue: MessageQueue<string, MessagePayload>;
   private readonly messagePublish: (data: KeyValue) => void;
 
   protected abstract registerEvents(): void;
@@ -51,8 +49,6 @@ export abstract class ZigbeeAccessory extends EventEmitter {
     assert(this.platform);
     assert(this.accessory);
 
-    // Message queue timeout shall be greater than the default zcl endpoint timeout which is 10s, so we shall use 12s here
-    this.messageQueue = new MessageQueue(this.log, secondsToMilliseconds(12));
     this.messagePublish = this.updateState.bind(this);
 
     const entity = this.zigbee.resolveEntity(device);
@@ -122,20 +118,10 @@ export abstract class ZigbeeAccessory extends EventEmitter {
   }
 
   public async processMessage(message: MessagePayload) {
-    let processed = false;
-
-    if (message.type === 'readResponse') {
-      const messageKey = getMessageKey(message.device, message.endpoint, message.meta.zclTransactionSequenceNumber);
-      this.log.debug(`Processing synchronous response for message key '${messageKey}'`);
-      processed = this.messageQueue.processMessage(messageKey, message);
-    }
-
-    if (!processed) {
-      const state = this.getMessagePayload(message, this.messagePublish);
-      this.log.debug(`Decoded state for '${this.name}' from incoming message`, state);
-      if (state) {
-        this.messagePublish(state);
-      }
+    const state = this.getMessagePayload(message, this.messagePublish);
+    this.log.debug(`Decoded state for '${this.name}' from incoming message`, state);
+    if (state) {
+      this.messagePublish(state);
     }
   }
 
@@ -245,7 +231,6 @@ export abstract class ZigbeeAccessory extends EventEmitter {
     const definition = entity.definition;
     const converters = definition.toZigbee;
     const usedConverters: { [s: number]: ToZigbeeConverter[] } = {};
-    const responseKeys: string[] = [];
 
     // For each attribute call the corresponding converter
     for (const [keyIn, value] of this.getEntries(state)) {
@@ -309,16 +294,11 @@ export abstract class ZigbeeAccessory extends EventEmitter {
         const messageKey = getMessageKey(device, localTarget, sequenceNumber);
         this.log.debug(`Publishing '${type}' '${key}' to '${this.name}' with message key '${messageKey}'`);
 
-        // Enqueue message key to correlate received responses
-        responseKeys.push(this.messageQueue.enqueue(messageKey));
-
         // Call converter routine to publish message
         // Do not await 'convertGet' as it does not return a usable response, we shall await the messageQueue responses instead
         converter.convertGet(localTarget, key, meta).catch((error) => {
           const message = `Publish '${type}' '${key}' to '${this.name}' failed: '${error}'`;
           this.log.error(message);
-          // Assume message has timed-out and resolve it as an empty payload here
-          this.messageQueue.processMessage(messageKey, <MessagePayload>{});
         });
       } else {
         // No converters available for state
@@ -327,31 +307,6 @@ export abstract class ZigbeeAccessory extends EventEmitter {
       }
 
       usedConverters[endpointID].push(converter);
-    }
-
-    // Wait for any response messages if necessary
-    if (type === 'get' && responseKeys.length) {
-      this.log.debug(`TX ${responseKeys.length} message(s) to device ${this.name}`);
-      const responses = await this.messageQueue.wait(responseKeys).catch((error) => {
-        this.log.error(`Message 'get' timeout: '${error}'`);
-        return [];
-      });
-      this.log.debug(`RX ${responses.length} message(s) from device ${this.name}`);
-
-      if (responses.length !== responseKeys.length) {
-        this.log.warn(
-          `Did not receive all responses from device ${this.name}, [EXP:${responseKeys.length}, GOT:${responses.length}]`,
-        );
-      }
-
-      responses.forEach((response) => {
-        const payload = this.getMessagePayload(response, this.messagePublish);
-        this.log.debug(`Decoded state for '${this.name}' from response message`, payload);
-
-        // Update accessory state context only
-        // Do not emit the state update event to avoid double processing as this was an explicit 'get' request by the caller
-        this.updateState(payload);
-      });
     }
 
     // Return the accessory state context
