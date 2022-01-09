@@ -21,7 +21,6 @@ import {
   ZigbeeDevice,
 } from '../zigbee';
 import { getEndpointNames, objectHasProperty, getMessageKey } from '../utils/utils';
-import { peekNextTransactionSequenceNumber } from '../utils/zcl';
 import { Events } from '.';
 
 const propertyEndpointRegex = new RegExp(`^(.*)_(${getEndpointNames().join('|')}|\\d+)$`);
@@ -289,11 +288,6 @@ export abstract class ZigbeeAccessory extends EventEmitter {
         // Invoke the legacy state retrieve handler
         this.legacyRetrieveState(entity, converter, result, localTarget, key, meta);
       } else if (type === 'get' && converter.convertGet) {
-        // Compute message key using expected message sequence number
-        const sequenceNumber = peekNextTransactionSequenceNumber();
-        const messageKey = getMessageKey(device, localTarget, sequenceNumber);
-        this.log.debug(`Publishing '${type}' '${key}' to '${this.name}' with message key '${messageKey}'`);
-
         // Call converter routine to publish message
         // Do not await 'convertGet' as it does not return a usable response, we shall await the messageQueue responses instead
         converter.convertGet(localTarget, key, meta).catch((error) => {

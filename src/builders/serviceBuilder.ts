@@ -77,7 +77,7 @@ export abstract class ServiceBuilder {
     return payload.color.s;
   }
 
-  protected debugState(name, value) {
+  protected debugState(name: string, value: unknown) {
     const displayName = `${this.zigbeeAccessory.ID}:${this.zigbeeAccessory.name}`;
     this.log.info(`[${displayName}] ${this.constructor.name}: ${name}:`, value);
   }
