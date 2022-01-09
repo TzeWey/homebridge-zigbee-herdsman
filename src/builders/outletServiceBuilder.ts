@@ -25,8 +25,9 @@ export class OutletServiceBuilder extends ServiceBuilder {
       .getCharacteristic(Characteristic.On)
       .on(CharacteristicEventTypes.SET, async (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
         try {
-          const state = await this.setOnOffState((value as boolean) ? 'ON' : 'OFF');
-          this.debugState('SET State', state.state);
+          const state = (value as boolean) ? 'ON' : 'OFF';
+          this.debugState('SET State', state);
+          await this.setOnOffState(state);
           callback();
         } catch (e) {
           if (types.isNativeError(e)) {
