@@ -1,5 +1,5 @@
 import { Service } from 'homebridge';
-import { ZigbeeAccessory, Events } from '..';
+import { ZigbeeAccessory } from '..';
 import { ProgrammableSwitchServiceBuilder, BatteryServiceBuilder } from '../../builders';
 
 export class TuyaOnOffTripleSwitch extends ZigbeeAccessory {
