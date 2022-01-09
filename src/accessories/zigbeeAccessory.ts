@@ -19,8 +19,9 @@ import {
   ConvertOptions,
   ToZigbeeConverter,
   ZigbeeDevice,
+  Definition,
 } from '../zigbee';
-import { getEndpointNames, objectHasProperty, getMessageKey } from '../utils/utils';
+import { getEndpointNames, objectHasProperty } from '../utils/utils';
 import { Events } from '.';
 
 const propertyEndpointRegex = new RegExp(`^(.*)_(${getEndpointNames().join('|')}|\\d+)$`);
@@ -205,12 +206,88 @@ export abstract class ZigbeeAccessory extends EventEmitter {
     }
   }
 
+  private getPublishTarget(
+    entity: ZigbeeDevice,
+    endpoint: Endpoint,
+    key: string,
+  ): { endpointName: string; publishEndpoint: Endpoint; publishKey: string } | null {
+    let endpointName = endpoint.ID.toString();
+    let publishKey = key;
+    let publishEndpoint: Endpoint = endpoint;
+
+    // When the key has a endpointName included (e.g. state_right), this will override the target.
+    const propertyEndpointMatch = publishKey.match(propertyEndpointRegex);
+    if (propertyEndpointMatch) {
+      endpointName = propertyEndpointMatch[2];
+      publishKey = propertyEndpointMatch[1];
+      const tempEndpoint = entity.endpoint(endpointName);
+      if (tempEndpoint === null) {
+        this.log.error(`Device '${entity.name}' has no endpoint '${endpointName}'`);
+        return null;
+      }
+      publishEndpoint = tempEndpoint;
+    }
+
+    return {
+      endpointName,
+      publishEndpoint,
+      publishKey,
+    };
+  }
+
+  /**
+   * Check whether a converter has already been used.
+   */
+  private checkConverterAlreadyUsed(
+    endpoint: Endpoint,
+    usedConverters: Map<number, ToZigbeeConverter[]>,
+    converter: ToZigbeeConverter,
+  ): boolean {
+    const endpointID = endpoint.ID;
+    const converters = usedConverters.get(endpointID);
+
+    if (converters === undefined) {
+      usedConverters.set(endpointID, []);
+      return false;
+    }
+
+    if (converters.includes(converter)) {
+      return true;
+    }
+
+    converters.push(converter);
+    return false;
+  }
+
+  private getConverter(
+    type: 'get' | 'set',
+    endpoint: Endpoint,
+    definition: Definition,
+    usedConverters: Map<number, ToZigbeeConverter[]>,
+    key: string,
+  ): ToZigbeeConverter | false | null {
+    const converters = definition.toZigbee;
+    const converter = converters.find((c) => c.key.includes(key));
+
+    if (!converter) {
+      return null;
+    }
+
+    // Check to ensure a converter is only used once for 'set' requests.
+    // (e.g. light_onoff_brightness converters can convert state and brightness)
+    if (type === 'set' && this.checkConverterAlreadyUsed(endpoint, usedConverters, converter)) {
+      return false;
+    }
+
+    return converter;
+  }
+
   private async publishDeviceState<T>(type: 'get' | 'set', state: T, options: Options = {}): Promise<T> {
     const entity = this.zigbeeEntity;
 
     if (!(entity instanceof ZigbeeDevice)) {
       this.log.error('Only ZigbeeDevice is implemented!', entity);
-      return state;
+      return this.state as T;
     }
 
     const device = entity.zh;
@@ -218,51 +295,35 @@ export abstract class ZigbeeAccessory extends EventEmitter {
     if (!entity.definition) {
       this.log.warn(`Device with modelID '${device.modelID}' is not supported.`);
       this.log.warn('Please see: https://www.zigbee2mqtt.io/how_tos/how_to_support_new_devices.html');
-      return state;
+      return this.state as T;
     }
 
-    const target = entity.endpoint();
-    if (target === null) {
+    const endpoint = entity.endpoint();
+    if (endpoint === null) {
       this.log.warn(`Device with modelID '${device.modelID}' has no endpoint.`);
-      return state;
+      return this.state as T;
     }
 
-    const definition = entity.definition;
-    const converters = definition.toZigbee;
-    const usedConverters: { [s: number]: ToZigbeeConverter[] } = {};
+    const usedConverters = new Map<number, ToZigbeeConverter[]>();
 
     // For each attribute call the corresponding converter
-    for (const [keyIn, value] of this.getEntries(state)) {
-      let key = keyIn;
-      let endpointName = target.ID.toString();
-      let localTarget: Endpoint = target;
+    for (const [originalKey, value] of this.getEntries(state)) {
+      const publishTarget = this.getPublishTarget(entity, endpoint, originalKey);
 
-      // When the key has a endpointName included (e.g. state_right), this will override the target.
-      const propertyEndpointMatch = key.match(propertyEndpointRegex);
-      if (propertyEndpointMatch) {
-        endpointName = propertyEndpointMatch[2];
-        key = propertyEndpointMatch[1];
-        const tempTarget = entity.endpoint(endpointName);
-        if (tempTarget === null) {
-          this.log.error(`Device '${entity.name}' has no endpoint '${endpointName}'`);
-          continue;
-        }
-        localTarget = tempTarget;
-      }
-
-      const endpointID = localTarget.ID;
-      if (!(endpointID in usedConverters)) {
-        usedConverters[endpointID] = [];
-      }
-
-      const converter = converters.find((c) => c.key.includes(key));
-      if (!converter) {
-        this.log.error(`No converter available for '${key}' (${state[key]})`);
+      if (publishTarget === null) {
         continue;
       }
 
-      if (type === 'set' && usedConverters[endpointID].includes(converter)) {
-        // Use a converter only once (e.g. light_onoff_brightness converters can convert state and brightness)
+      const { endpointName, publishEndpoint, publishKey: key } = publishTarget;
+
+      const definition = entity.definition;
+      const converter = this.getConverter(type, endpoint, definition, usedConverters, key);
+
+      if (converter === null) {
+        this.log.warn(`No converter available for '${key}' (${state[key]})`);
+        continue;
+      } else if (converter === false) {
+        // Converter has already been used
         continue;
       }
 
@@ -277,30 +338,29 @@ export abstract class ZigbeeAccessory extends EventEmitter {
         mapped: definition,
       };
 
+      // Invoke converter to publish message
+      // Do not await converters as it may cause homebridge to appear unresponsive should the device be unreachable
       if (type === 'set' && converter.convertSet) {
-        // Invoke converter to parse received value
         this.log.debug(`Publishing '${type}' '${key}' with '${value}' to '${this.name}'`);
-        const result = (await converter.convertSet(localTarget, key, value, meta).catch((error) => {
-          const message = `Publish '${type}' '${key}' to '${this.name}' failed: '${error}'`;
-          this.log.error(message);
-        })) as ToZigbeeConverterResult;
-
-        // Invoke the legacy state retrieve handler
-        this.legacyRetrieveState(entity, converter, result, localTarget, key, meta);
+        converter
+          .convertSet(publishEndpoint, key, value, meta)
+          .then((result: ToZigbeeConverterResult) => {
+            // Invoke the legacy state retrieve handler
+            this.legacyRetrieveState(entity, converter, result, publishEndpoint, key, meta);
+          })
+          .catch((error) => {
+            this.log.warn(`Publish '${type}' '${key}' to '${this.name}' failed:\n${error}`);
+          });
       } else if (type === 'get' && converter.convertGet) {
-        // Call converter routine to publish message
-        // Do not await 'convertGet' as it does not return a usable response, we shall await the messageQueue responses instead
-        converter.convertGet(localTarget, key, meta).catch((error) => {
-          const message = `Publish '${type}' '${key}' to '${this.name}' failed: '${error}'`;
-          this.log.error(message);
+        this.log.debug(`Publishing '${type}' '${key}' to '${this.name}'`);
+        converter.convertGet(publishEndpoint, key, meta).catch((error) => {
+          this.log.warn(`Publish '${type}' '${key}' to '${this.name}' failed:\n${error}`);
         });
       } else {
         // No converters available for state
-        this.log.error(`No converter available for '${type}' '${key}' (${value})`);
+        this.log.warn(`No converter available for '${type}' '${key}' (${value})`);
         continue;
       }
-
-      usedConverters[endpointID].push(converter);
     }
 
     // Return the accessory state context
