@@ -49,19 +49,17 @@ export class ProgrammableSwitchServiceBuilder extends ServiceBuilder {
 
     this.zigbeeAccessory.on(Events.stateUpdate, (state: unknown) => {
       const event = eventStateTranslationCallback(state);
-      if (!event || event === null) {
+
+      // Skip if the stateUpdate does not match or has no matching actions
+      if (event === null || !eventActionMap.has(event)) {
         return;
       }
 
       this.debugState('ButtonEvent', event);
-
-      if (!eventActionMap.has(event)) {
-        this.log.warn(`Unhandled ButtonEvent: '${event}'`);
-        return;
+      const action = eventActionMap.get(event);
+      if (action !== undefined) {
+        this.service.getCharacteristic(Characteristic.ProgrammableSwitchEvent).setValue(action);
       }
-
-      const action = eventActionMap[event];
-      this.service.getCharacteristic(Characteristic.ProgrammableSwitchEvent).setValue(action);
     });
 
     return this;
