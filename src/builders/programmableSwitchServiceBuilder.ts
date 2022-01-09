@@ -8,7 +8,7 @@ import {
 import { ZigbeeAccessory, Events } from '../accessories';
 import { ServiceBuilder } from './serviceBuilder';
 
-export type ProgrammableSwitchEventStateTranslationCallback = (state: unknown) => string;
+export type ProgrammableSwitchEventStateTranslationCallback = (state: unknown) => string | null;
 export type ProgrammableSwitchEventAction = { event: string; action: number };
 
 export class ProgrammableSwitchServiceBuilder extends ServiceBuilder {
@@ -49,7 +49,7 @@ export class ProgrammableSwitchServiceBuilder extends ServiceBuilder {
 
     this.zigbeeAccessory.on(Events.stateUpdate, (state: unknown) => {
       const event = eventStateTranslationCallback(state);
-      if (!event) {
+      if (!event || event === null) {
         return;
       }
 
@@ -57,6 +57,7 @@ export class ProgrammableSwitchServiceBuilder extends ServiceBuilder {
 
       if (!eventActionMap.has(event)) {
         this.log.warn(`Unhandled ButtonEvent: '${event}'`);
+        return;
       }
 
       const action = eventActionMap[event];

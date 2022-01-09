@@ -13,9 +13,9 @@ export class TuyaOnOffTripleSwitch extends ZigbeeAccessory {
     // No events of interest
   }
 
-  private eventTranslation(state: unknown): string {
+  private eventTranslation(state: unknown) {
     const eventState = state as { action: string };
-    return eventState.action || 'unknown';
+    return eventState.action || null;
   }
 
   protected resolveServices(): Service[] {

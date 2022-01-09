@@ -11,9 +11,9 @@ export class IkeaOnOffSwitch extends ZigbeeAccessory {
     // No events of interest
   }
 
-  private eventTranslation(state: unknown): string {
+  private eventTranslation(state: unknown) {
     const eventState = state as { click: string };
-    return eventState.click || 'unknown';
+    return eventState.click || null;
   }
 
   protected resolveServices(): Service[] {
