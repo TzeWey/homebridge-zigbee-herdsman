@@ -8,7 +8,14 @@ import {
 import { ZigbeeAccessory, Events } from '../accessories';
 import { ServiceBuilder } from './serviceBuilder';
 
+/**
+ * Callback to translate the event state object to an action event string.
+ *
+ * @param state The state update event object
+ * @return A string of the button event to be handled, else return 'null' to skip handling altogether.
+ */
 export type ProgrammableSwitchEventStateTranslationCallback = (state: unknown) => string | null;
+
 export type ProgrammableSwitchEventAction = { event: string; action: number };
 
 export class ProgrammableSwitchServiceBuilder extends ServiceBuilder {

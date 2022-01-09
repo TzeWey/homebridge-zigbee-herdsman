@@ -17,8 +17,8 @@ export abstract class ServiceBuilder {
   /**
    * Public Common Functions
    */
-  public async setOn(on: boolean) {
-    return this.zigbeeAccessory.setDeviceState({ state: on ? 'ON' : 'OFF' });
+  public async setOnOffState(state: 'ON' | 'OFF') {
+    return this.zigbeeAccessory.setDeviceState({ state });
   }
 
   public async getOnOffState(): Promise<{ state?: 'ON' | 'OFF' }> {

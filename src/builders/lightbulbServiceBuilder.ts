@@ -26,8 +26,8 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
       .getCharacteristic(Characteristic.On)
       .on(CharacteristicEventTypes.SET, async (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
         try {
-          const state = await this.setOn(value === true);
-          this.debugState('=> State', state.state);
+          const state = await this.setOnOffState((value as boolean) ? 'ON' : 'OFF');
+          this.debugState('SET State', state.state);
           callback();
         } catch (e) {
           if (types.isNativeError(e)) {
@@ -72,7 +72,7 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
         const brightness = Math.round(brightness_percent * 2.55);
         try {
           const state = await this.setBrightness(brightness);
-          this.debugState('=> Brightness', state.brightness / 2.55);
+          this.debugState('SET Brightness', state.brightness / 2.55);
           callback();
         } catch (e) {
           if (types.isNativeError(e)) {
@@ -118,7 +118,7 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
         try {
           const colorTemperature = value as number;
           await this.setColorTemperature(colorTemperature);
-          this.debugState('=> Color Temperature', colorTemperature);
+          this.debugState('SET Color Temperature', colorTemperature);
           callback();
         } catch (e) {
           if (types.isNativeError(e)) {
@@ -163,7 +163,7 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
         try {
           const hue = value as number;
           await this.setHue(hue);
-          this.debugState('=> Hue', hue);
+          this.debugState('SET Hue', hue);
           callback();
         } catch (e) {
           if (types.isNativeError(e)) {
@@ -214,7 +214,7 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
           const hsbType = new HSBType(hue, saturation, v);
           const [r, g, b] = hsbType.toRGBBytes();
           await this.setColorRGB(r, g, b);
-          this.debugState('=> Color RGB', { r, g, b });
+          this.debugState('SET Color RGB', { r, g, b });
           callback();
         } catch (e) {
           if (types.isNativeError(e)) {
@@ -268,7 +268,7 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
         try {
           const saturation = value as number;
           await this.setSaturation(saturation);
-          this.debugState('=> Saturation', saturation);
+          this.debugState('SET Saturation', saturation);
           callback();
         } catch (e) {
           if (types.isNativeError(e)) {
