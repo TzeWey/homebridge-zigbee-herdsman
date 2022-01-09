@@ -8,7 +8,15 @@ import {
 import { ZigbeeAccessory, Events } from '../accessories';
 import { ServiceBuilder } from './serviceBuilder';
 
-export type ProgrammableSwitchClickAction = { click: string; action: number };
+/**
+ * Callback to translate the event state object to an action event string.
+ *
+ * @param state The state update event object
+ * @return A string of the button event to be handled, else return 'null' to skip handling altogether.
+ */
+export type ProgrammableSwitchEventStateTranslationCallback = (state: unknown) => string | null;
+
+export type ProgrammableSwitchEventAction = { event: string; action: number };
 
 export class ProgrammableSwitchServiceBuilder extends ServiceBuilder {
   constructor(protected readonly zigbeeAccessory: ZigbeeAccessory) {
@@ -19,7 +27,8 @@ export class ProgrammableSwitchServiceBuilder extends ServiceBuilder {
     displayName: string,
     subType: string,
     index: number,
-    actions?: ProgrammableSwitchClickAction[],
+    eventStateTranslationCallback: ProgrammableSwitchEventStateTranslationCallback,
+    eventActions?: ProgrammableSwitchEventAction[],
   ): ProgrammableSwitchServiceBuilder {
     const StatelessProgrammableSwitch = this.platform.Service.StatelessProgrammableSwitch;
     const Characteristic = this.platform.Characteristic;
@@ -34,30 +43,30 @@ export class ProgrammableSwitchServiceBuilder extends ServiceBuilder {
 
     const eventActionMap = new Map<string, number>();
 
-    if (actions && actions.length > 0) {
-      const supportedActions = actions.map((action) => action.action);
+    if (eventActions && eventActions.length > 0) {
+      const supportedActions = eventActions.map((action) => action.action);
       this.service.getCharacteristic(Characteristic.ProgrammableSwitchEvent).setProps({
         validValues: supportedActions,
       });
 
-      actions.forEach((action) => {
-        eventActionMap.set(action.click, action.action);
+      eventActions.forEach((action) => {
+        eventActionMap.set(action.event, action.action);
       });
     }
 
-    this.zigbeeAccessory.on(Events.stateUpdate, (state: { click?: string }) => {
-      if (!state.click) {
+    this.zigbeeAccessory.on(Events.stateUpdate, (state: unknown) => {
+      const event = eventStateTranslationCallback(state);
+
+      // Skip if the stateUpdate does not match or has no matching actions
+      if (event === null || !eventActionMap.has(event)) {
         return;
       }
 
-      this.debugState('click', state.click);
-
-      if (!eventActionMap.has(state.click)) {
-        this.log.warn(`Unhandled click event: '${state.click}'`);
+      this.debugState('ButtonEvent', event);
+      const action = eventActionMap.get(event);
+      if (action !== undefined) {
+        this.service.getCharacteristic(Characteristic.ProgrammableSwitchEvent).setValue(action);
       }
-
-      const action = eventActionMap[state.click];
-      this.service.getCharacteristic(Characteristic.ProgrammableSwitchEvent).setValue(action);
     });
 
     return this;

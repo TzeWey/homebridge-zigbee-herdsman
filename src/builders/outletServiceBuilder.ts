@@ -25,9 +25,9 @@ export class OutletServiceBuilder extends ServiceBuilder {
       .getCharacteristic(Characteristic.On)
       .on(CharacteristicEventTypes.SET, async (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
         try {
-          const on = value as boolean;
-          await this.setOn(on);
-          this.debugState('> On', value);
+          const state = (value as boolean) ? 'ON' : 'OFF';
+          this.debugState('SET State', state);
+          await this.setOnOffState(state);
           callback();
         } catch (e) {
           if (types.isNativeError(e)) {
@@ -48,7 +48,7 @@ export class OutletServiceBuilder extends ServiceBuilder {
 
     this.zigbeeAccessory.on(Events.stateUpdate, (state: { state?: 'ON' | 'OFF' }) => {
       if (state.state !== undefined) {
-        this.debugState('On', state.state);
+        this.debugState('State', state.state);
         this.service.updateCharacteristic(Characteristic.On, state.state === 'ON');
       }
     });

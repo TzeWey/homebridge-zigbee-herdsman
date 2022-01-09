@@ -26,8 +26,9 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
       .getCharacteristic(Characteristic.On)
       .on(CharacteristicEventTypes.SET, async (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
         try {
-          const state = await this.setOn(value === true);
-          this.debugState('=> On', state);
+          const state = (value as boolean) ? 'ON' : 'OFF';
+          this.debugState('SET State', state);
+          await this.setOnOffState(state);
           callback();
         } catch (e) {
           if (types.isNativeError(e)) {
@@ -51,7 +52,7 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
 
     this.zigbeeAccessory.on(Events.stateUpdate, (state: { state?: 'ON' | 'OFF' }) => {
       if (state.state !== undefined) {
-        this.debugState('On', state.state);
+        this.debugState('State', state.state);
         this.service.updateCharacteristic(Characteristic.On, state.state === 'ON');
       }
     });
@@ -71,8 +72,8 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
         const brightness_percent = Number(value);
         const brightness = Math.round(brightness_percent * 2.55);
         try {
-          const state = await this.setBrightness(brightness);
-          this.debugState('=> Brightness', state.brightness / 2.55);
+          this.debugState('SET Brightness', brightness_percent);
+          await this.setBrightness(brightness);
           callback();
         } catch (e) {
           if (types.isNativeError(e)) {
@@ -117,8 +118,8 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
       .on(CharacteristicEventTypes.SET, async (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
         try {
           const colorTemperature = value as number;
+          this.debugState('SET Color Temperature', colorTemperature);
           await this.setColorTemperature(colorTemperature);
-          this.debugState('=> Color Temperature', colorTemperature);
           callback();
         } catch (e) {
           if (types.isNativeError(e)) {
@@ -162,8 +163,8 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
       .on(CharacteristicEventTypes.SET, async (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
         try {
           const hue = value as number;
+          this.debugState('SET Hue', hue);
           await this.setHue(hue);
-          this.debugState('=> Hue', hue);
           callback();
         } catch (e) {
           if (types.isNativeError(e)) {
@@ -213,8 +214,8 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
           const hue = this.service.getCharacteristic(Characteristic.Hue).value as number;
           const hsbType = new HSBType(hue, saturation, v);
           const [r, g, b] = hsbType.toRGBBytes();
+          this.debugState('SET Color RGB', { r, g, b });
           await this.setColorRGB(r, g, b);
-          this.debugState('=> Color RGB', { r, g, b });
           callback();
         } catch (e) {
           if (types.isNativeError(e)) {
@@ -229,7 +230,6 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
         try {
           const state = await this.getColorXY();
           if (state.color && state.color.x !== undefined && state.color.y !== undefined) {
-            this.debugState('Color XY', state.color);
             const hsbType = HSBType.fromXY(state.color.x, state.color.y, Y);
             this.service.updateCharacteristic(Characteristic.Hue, hsbType.hue);
             callback(null, hsbType.saturation);
@@ -268,8 +268,8 @@ export class LightbulbServiceBuilder extends ServiceBuilder {
       .on(CharacteristicEventTypes.SET, async (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
         try {
           const saturation = value as number;
+          this.debugState('SET Saturation', saturation);
           await this.setSaturation(saturation);
-          this.debugState('=> Saturation', saturation);
           callback();
         } catch (e) {
           if (types.isNativeError(e)) {
