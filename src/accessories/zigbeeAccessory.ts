@@ -20,7 +20,7 @@ import {
   ToZigbeeConverter,
   ZigbeeDevice,
 } from '../zigbee';
-import { getEndpointNames, objectHasProperty, getMessageKey } from '../utils/utils';
+import { getEndpointNames, objectHasProperty } from '../utils/utils';
 import { Events } from '.';
 
 const propertyEndpointRegex = new RegExp(`^(.*)_(${getEndpointNames().join('|')}|\\d+)$`);
@@ -277,19 +277,25 @@ export abstract class ZigbeeAccessory extends EventEmitter {
         mapped: definition,
       };
 
+      // Invoke converter to publish message
       if (type === 'set' && converter.convertSet) {
-        // Invoke converter to parse received value
         this.log.debug(`Publishing '${type}' '${key}' with '${value}' to '${this.name}'`);
-        const result = (await converter.convertSet(localTarget, key, value, meta).catch((error) => {
-          const message = `Publish '${type}' '${key}' to '${this.name}' failed: '${error}'`;
-          this.log.error(message);
-        })) as ToZigbeeConverterResult;
 
-        // Invoke the legacy state retrieve handler
-        this.legacyRetrieveState(entity, converter, result, localTarget, key, meta);
+        // Do not await 'convertSet' as it may cause homebridge to appear unresponsive should the device be unreachable
+        converter
+          .convertSet(localTarget, key, value, meta)
+          .then((result: ToZigbeeConverterResult) => {
+            // Invoke the legacy state retrieve handler
+            this.legacyRetrieveState(entity, converter, result, localTarget, key, meta);
+          })
+          .catch((error) => {
+            const message = `Publish '${type}' '${key}' to '${this.name}' failed: '${error}'`;
+            this.log.error(message);
+          });
       } else if (type === 'get' && converter.convertGet) {
-        // Call converter routine to publish message
-        // Do not await 'convertGet' as it does not return a usable response, we shall await the messageQueue responses instead
+        this.log.debug(`Publishing '${type}' '${key}' to '${this.name}'`);
+
+        // Do not await 'convertGet' as it does not return a usable response
         converter.convertGet(localTarget, key, meta).catch((error) => {
           const message = `Publish '${type}' '${key}' to '${this.name}' failed: '${error}'`;
           this.log.error(message);
