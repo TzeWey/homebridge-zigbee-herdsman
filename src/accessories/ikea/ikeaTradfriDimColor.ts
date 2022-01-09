@@ -10,7 +10,7 @@ export class IkeaTradfriDimColor extends ZigbeeAccessory {
   }
 
   protected resolveServices() {
-    this.service = new LightbulbServiceBuilder(this).withOnOff().withBrightness().withColorXY().build();
+    this.service = new LightbulbServiceBuilder(this).withOnOff().withBrightnessPercent().withColorXY().build();
     return [this.service];
   }
 }

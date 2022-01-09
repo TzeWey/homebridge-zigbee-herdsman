@@ -21,7 +21,7 @@ export class HumiditySensorServiceBuilder extends ServiceBuilder {
       });
 
     this.zigbeeAccessory.on(Events.stateUpdate, (state: { humidity?: number }) => {
-      if (state.humidity) {
+      if (state.humidity !== undefined) {
         this.debugState('CurrentRelativeHumidity', state.humidity);
         this.service.updateCharacteristic(Characteristic.CurrentRelativeHumidity, state.humidity);
       }

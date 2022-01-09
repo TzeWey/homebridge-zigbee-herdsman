@@ -1,5 +1,5 @@
 import { Service } from 'homebridge';
-import { ZigbeeAccessory, Events } from '..';
+import { ZigbeeAccessory } from '..';
 import { ProgrammableSwitchServiceBuilder, BatteryServiceBuilder } from '../../builders';
 
 export class IkeaOnOffSwitch extends ZigbeeAccessory {
@@ -8,7 +8,7 @@ export class IkeaOnOffSwitch extends ZigbeeAccessory {
   private switchBattery!: Service;
 
   protected registerEvents() {
-    this.on(Events.stateUpdate, this.onStateUpdate.bind(this));
+    // No events of interest
   }
 
   protected resolveServices(): Service[] {
@@ -19,35 +19,21 @@ export class IkeaOnOffSwitch extends ZigbeeAccessory {
     const battBuilder = new BatteryServiceBuilder(this);
 
     this.switchServiceOn = switchBuilder
-      .withStatelessSwitch('ON', 'on', 1, [ProgrammableSwitchEvent.SINGLE_PRESS, ProgrammableSwitchEvent.LONG_PRESS])
+      .withStatelessSwitch('ON', 'on', 1, [
+        { click: 'on', action: ProgrammableSwitchEvent.SINGLE_PRESS },
+        { click: 'brightness_up', action: ProgrammableSwitchEvent.LONG_PRESS },
+      ])
       .build();
 
     this.switchServiceOff = switchBuilder
-      .withStatelessSwitch('OFF', 'off', 2, [ProgrammableSwitchEvent.SINGLE_PRESS, ProgrammableSwitchEvent.LONG_PRESS])
+      .withStatelessSwitch('OFF', 'off', 2, [
+        { click: 'off', action: ProgrammableSwitchEvent.SINGLE_PRESS },
+        { click: 'brightness_down', action: ProgrammableSwitchEvent.LONG_PRESS },
+      ])
       .build();
 
     this.switchBattery = battBuilder.build();
 
     return [this.switchServiceOn, this.switchServiceOff, this.switchBattery];
-  }
-
-  private onStateUpdate(state: { click: 'brightness_up' | 'brightness_down' | 'on' | 'off' }) {
-    const Characteristic = this.platform.Characteristic;
-    const ProgrammableSwitchEvent = Characteristic.ProgrammableSwitchEvent;
-
-    switch (state.click) {
-      case 'brightness_up':
-        this.switchServiceOn.getCharacteristic(ProgrammableSwitchEvent).setValue(ProgrammableSwitchEvent.LONG_PRESS);
-        break;
-      case 'brightness_down':
-        this.switchServiceOff.getCharacteristic(ProgrammableSwitchEvent).setValue(ProgrammableSwitchEvent.LONG_PRESS);
-        break;
-      case 'on':
-        this.switchServiceOn.getCharacteristic(ProgrammableSwitchEvent).setValue(ProgrammableSwitchEvent.SINGLE_PRESS);
-        break;
-      case 'off':
-        this.switchServiceOff.getCharacteristic(ProgrammableSwitchEvent).setValue(ProgrammableSwitchEvent.SINGLE_PRESS);
-        break;
-    }
   }
 }

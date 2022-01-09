@@ -6,12 +6,13 @@ import {
 } from 'homebridge';
 import { types } from 'util';
 
-import { ZigbeeAccessory } from '../accessories';
+import { ZigbeeAccessory, Events } from '../accessories';
 import { ServiceBuilder } from './serviceBuilder';
 
 export class OutletServiceBuilder extends ServiceBuilder {
   constructor(protected readonly zigbeeAccessory: ZigbeeAccessory) {
     super(zigbeeAccessory);
+
     this.service =
       this.platformAccessory.getService(this.platform.Service.Outlet) ||
       this.platformAccessory.addService(this.platform.Service.Outlet);
@@ -26,6 +27,7 @@ export class OutletServiceBuilder extends ServiceBuilder {
         try {
           const on = value as boolean;
           await this.setOn(on);
+          this.debugState('> On', value);
           callback();
         } catch (e) {
           if (types.isNativeError(e)) {
@@ -35,15 +37,21 @@ export class OutletServiceBuilder extends ServiceBuilder {
       })
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         try {
-          const value = await this.getOnOffState();
-          this.debugState('getOnOffState', value);
-          callback(null, value);
+          await this.getOnOffState();
+          callback();
         } catch (e) {
           if (types.isNativeError(e)) {
             callback(e);
           }
         }
       });
+
+    this.zigbeeAccessory.on(Events.stateUpdate, (state: { state?: 'ON' | 'OFF' }) => {
+      if (state.state !== undefined) {
+        this.debugState('On', state.state);
+        this.service.updateCharacteristic(Characteristic.On, state.state === 'ON');
+      }
+    });
 
     return this;
   }

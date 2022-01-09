@@ -10,7 +10,7 @@ export class IkeaTradfriDim extends ZigbeeAccessory {
   }
 
   protected resolveServices() {
-    this.service = new LightbulbServiceBuilder(this).withOnOff().withBrightness().build();
+    this.service = new LightbulbServiceBuilder(this).withOnOff().withBrightnessPercent().build();
     return [this.service];
   }
 }

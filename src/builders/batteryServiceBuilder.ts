@@ -22,7 +22,7 @@ export class BatteryServiceBuilder extends ServiceBuilder {
       });
 
     this.zigbeeAccessory.on(Events.stateUpdate, (state: { battery?: number }) => {
-      if (state.battery) {
+      if (state.battery !== undefined) {
         this.debugState('BatteryLevel', state.battery);
         this.service.updateCharacteristic(Characteristic.BatteryLevel, state.battery);
       }

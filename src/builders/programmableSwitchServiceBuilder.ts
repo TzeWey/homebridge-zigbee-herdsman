@@ -5,8 +5,10 @@ import {
   CharacteristicSetCallback,
 } from 'homebridge';
 
-import { ZigbeeAccessory } from '../accessories';
+import { ZigbeeAccessory, Events } from '../accessories';
 import { ServiceBuilder } from './serviceBuilder';
+
+export type ProgrammableSwitchClickAction = { click: string; action: number };
 
 export class ProgrammableSwitchServiceBuilder extends ServiceBuilder {
   constructor(protected readonly zigbeeAccessory: ZigbeeAccessory) {
@@ -17,25 +19,53 @@ export class ProgrammableSwitchServiceBuilder extends ServiceBuilder {
     displayName: string,
     subType: string,
     index: number,
-    supportedActions?: number[],
+    actions?: ProgrammableSwitchClickAction[],
   ): ProgrammableSwitchServiceBuilder {
+    const StatelessProgrammableSwitch = this.platform.Service.StatelessProgrammableSwitch;
+    const Characteristic = this.platform.Characteristic;
+
     this.service =
-      this.platformAccessory.getServiceById(this.platform.Service.StatelessProgrammableSwitch, subType) ||
-      this.platformAccessory.addService(this.platform.Service.StatelessProgrammableSwitch, displayName, subType);
+      this.platformAccessory.getServiceById(StatelessProgrammableSwitch, subType) ||
+      this.platformAccessory.addService(StatelessProgrammableSwitch, displayName, subType);
 
     this.service
-      .setCharacteristic(this.platform.Characteristic.Name, displayName)
-      .setCharacteristic(this.platform.Characteristic.ServiceLabelIndex, index);
+      .setCharacteristic(Characteristic.Name, displayName)
+      .setCharacteristic(Characteristic.ServiceLabelIndex, index);
 
-    if (supportedActions && supportedActions.length) {
-      this.service.getCharacteristic(this.platform.Characteristic.ProgrammableSwitchEvent).setProps({
+    const eventActionMap = new Map<string, number>();
+
+    if (actions && actions.length > 0) {
+      const supportedActions = actions.map((action) => action.action);
+      this.service.getCharacteristic(Characteristic.ProgrammableSwitchEvent).setProps({
         validValues: supportedActions,
       });
+
+      actions.forEach((action) => {
+        eventActionMap.set(action.click, action.action);
+      });
     }
+
+    this.zigbeeAccessory.on(Events.stateUpdate, (state: { click?: string }) => {
+      if (!state.click) {
+        return;
+      }
+
+      this.debugState('click', state.click);
+
+      if (!eventActionMap.has(state.click)) {
+        this.log.warn(`Unhandled click event: '${state.click}'`);
+      }
+
+      const action = eventActionMap[state.click];
+      this.service.getCharacteristic(Characteristic.ProgrammableSwitchEvent).setValue(action);
+    });
 
     return this;
   }
 
+  /**
+   * untested, no stateUpdate event handling, most probably doesn't work, no accessory handlers
+   */
   withStatefulSwitch(displayName: string, subType: string, index: number): ProgrammableSwitchServiceBuilder {
     const Characteristic = this.platform.Characteristic;
     this.service =
@@ -47,15 +77,15 @@ export class ProgrammableSwitchServiceBuilder extends ServiceBuilder {
       .setCharacteristic(Characteristic.ServiceLabelIndex, index)
       .setCharacteristic(Characteristic.ProgrammableSwitchOutputState, 0);
 
-    let btnState = false;
+    let buttonState = false;
     this.service
       .getCharacteristic(Characteristic.ProgrammableSwitchOutputState)
       .on(CharacteristicEventTypes.SET, async (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
-        btnState = !btnState;
-        callback(null, btnState ? 1 : 0);
+        buttonState = !buttonState;
+        callback(null, buttonState ? 1 : 0);
       })
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
-        callback(null, btnState ? 1 : 0);
+        callback(null, buttonState ? 1 : 0);
       });
 
     return this;

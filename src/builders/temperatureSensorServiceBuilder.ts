@@ -21,7 +21,7 @@ export class TemperatureSensorServiceBuilder extends ServiceBuilder {
       });
 
     this.zigbeeAccessory.on(Events.stateUpdate, (state: { temperature?: number }) => {
-      if (state.temperature) {
+      if (state.temperature !== undefined) {
         this.debugState('CurrentTemperature', state.temperature);
         this.service.updateCharacteristic(Characteristic.CurrentTemperature, state.temperature);
       }

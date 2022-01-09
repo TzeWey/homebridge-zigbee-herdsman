@@ -20,7 +20,7 @@ export class MotionSensorServiceBuilder extends ServiceBuilder {
       });
 
     this.zigbeeAccessory.on(Events.stateUpdate, (state: { occupancy?: boolean }) => {
-      if (typeof state.occupancy !== 'undefined') {
+      if (state.occupancy !== undefined) {
         const motionDetected = state.occupancy;
         this.debugState('MotionDetected', motionDetected);
         this.service.updateCharacteristic(Characteristic.MotionDetected, motionDetected);
