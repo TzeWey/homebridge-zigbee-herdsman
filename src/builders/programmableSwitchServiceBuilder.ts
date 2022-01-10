@@ -65,6 +65,7 @@ export class ProgrammableSwitchServiceBuilder extends ServiceBuilder {
       this.debugState('ButtonEvent', event);
       const action = eventActionMap.get(event);
       if (action !== undefined) {
+        this.debugState('ButtonEvent action', action);
         this.service.getCharacteristic(Characteristic.ProgrammableSwitchEvent).setValue(action);
       }
     });
