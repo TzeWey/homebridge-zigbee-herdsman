@@ -50,6 +50,7 @@ export class ProgrammableSwitchServiceBuilder extends ServiceBuilder {
       });
 
       eventActions.forEach((action) => {
+        this.debugState('ButtonEvent register action', action);
         eventActionMap.set(action.event, action.action);
       });
     }
