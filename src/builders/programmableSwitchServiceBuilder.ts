@@ -55,9 +55,7 @@ export class ProgrammableSwitchServiceBuilder extends ServiceBuilder {
       });
     }
 
-    const service = this.service;
-
-    this.zigbeeAccessory.on(Events.stateUpdate, (state: unknown) => {
+    const stateUpdate = (state: unknown) => {
       const event = eventStateTranslationCallback(state);
 
       // Skip if the stateUpdate does not match or has no matching actions
@@ -69,9 +67,10 @@ export class ProgrammableSwitchServiceBuilder extends ServiceBuilder {
       const action = eventActionMap.get(event);
       if (action !== undefined) {
         this.debugState('ButtonEvent action', action);
-        service.getCharacteristic(Characteristic.ProgrammableSwitchEvent).setValue(action);
+        this.service.getCharacteristic(Characteristic.ProgrammableSwitchEvent).setValue(action);
       }
-    });
+    };
+    this.zigbeeAccessory.on(Events.stateUpdate, stateUpdate.bind(this));
 
     return this;
   }
