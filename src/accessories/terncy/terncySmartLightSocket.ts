@@ -1,5 +1,5 @@
 import { Service } from 'homebridge';
-import { ZigbeeAccessory, Events } from '..';
+import { ZigbeeAccessory } from '..';
 import { LightbulbServiceBuilder } from '../../builders';
 
 export class TerncySmartLightSocket extends ZigbeeAccessory {

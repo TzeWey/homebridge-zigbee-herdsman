@@ -1,4 +1,3 @@
-import { stat } from 'fs';
 import { Service } from 'homebridge';
 import { ZigbeeAccessory } from '..';
 import { ProgrammableSwitchServiceBuilder, BatteryServiceBuilder } from '../../builders';
