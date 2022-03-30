@@ -32,7 +32,7 @@
     "js-big-decimal": "^1.3.4",
     "json-stable-stringify-without-jsonify": "^1.0.1",
     "zigbee-herdsman": "^0.14.20",
-    "zigbee-herdsman-converters": "^14.0.459"
+    "zigbee-herdsman-converters": "^14.0.465"
   },
   "devDependencies": {
     "@types/node": "^17.0.22",
